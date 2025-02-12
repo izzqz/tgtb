@@ -19,7 +19,7 @@ const EQUALS = "=";
 const AMP = "&";
 const NL = "\n";
 
-// Pre-compute hex table as array for V8 optimization
+// Pre-compute hex table
 const HEX_CHARS = new Array(256);
 {
   const hex = "0123456789abcdef";
@@ -50,11 +50,29 @@ export default function createValidateWebapp(bot_token: string) {
   const secretKeyPromise = crypto.subtle.sign("HMAC", WEBAPP_KEY, encoder.encode(bot_token));
   let secretKey: CryptoKey;
 
+  // V8 optimization: Monomorphic function with consistent property access
+  const parseUser = (value: string) => {
+    const user = JSON.parse(value);
+    // Ensure consistent object shape for V8 hidden classes
+    return {
+      id: Number(user.id) | 0,
+      first_name: user.first_name || "",
+      last_name: user.last_name || undefined,
+      username: user.username || undefined,
+      language_code: user.language_code || undefined,
+      is_premium: user.is_premium || undefined,
+      allows_write_to_pm: user.allows_write_to_pm || undefined,
+    };
+  };
+
   return async function validateWebapp(init_data: string): Promise<TelegramWebApps.WebAppInitData> {
     if (!init_data) throw new TypeError("InitData is nullish");
 
-    // Initialize secret key if not done yet (V8 optimized branch)
-    if (secretKey === undefined) {
+    // V8 optimization: Cache length for loop optimization
+    const dataLen = init_data.length | 0;
+    
+    // Initialize secret key if not done yet (V8 optimized branch prediction)
+    if (!secretKey) {
       secretKey = await crypto.subtle.importKey(
         "raw",
         await secretKeyPromise,
@@ -65,12 +83,15 @@ export default function createValidateWebapp(bot_token: string) {
     }
 
     const decodedData = decodeURIComponent(init_data);
-    const dataLen = decodedData.length | 0; // V8 hint for integer math
     
-    // Fast hash extraction with manual char checks
+    // Fast hash extraction with manual char checks and integer math
     let hashStart = -1;
     let i = 0;
-    while (i < dataLen - 4) {
+    const hashStr = "hash=";
+    const hashLen = hashStr.length | 0;
+    
+    // V8 optimization: Use integer math and avoid array access
+    while (i < (dataLen - hashLen)) {
       if (decodedData.charCodeAt(i) === 104 && // 'h'
           decodedData.charCodeAt(i + 1) === 97 && // 'a'
           decodedData.charCodeAt(i + 2) === 115 && // 's'
@@ -79,67 +100,79 @@ export default function createValidateWebapp(bot_token: string) {
         hashStart = i;
         break;
       }
-      i++;
+      i = (i + 1) | 0;
     }
+
     if (hashStart === -1) throw new Error("No hash found in init data");
     
-    const hashValueStart = hashStart + 5;
+    const hashValueStart = (hashStart + 5) | 0;
     let hashEnd = decodedData.indexOf(AMP, hashValueStart);
     if (hashEnd === -1) hashEnd = dataLen;
     const userHash = decodedData.slice(hashValueStart, hashEnd);
 
-    // Fast parts collection with manual char checks
+    // V8 optimization: Use local variables for better register allocation
     let partCount = 0;
     let start = 0;
+    let end = 0;
     
-    // Manual string splitting (V8 optimized)
+    // Manual string splitting with integer math
     while (start < dataLen) {
-      const end = decodedData.indexOf(AMP, start);
+      end = decodedData.indexOf(AMP, start);
       if (end === -1) {
         if (!decodedData.startsWith(HASH + EQUALS, start)) {
-          PARTS_BUFFER[partCount++] = decodedData.slice(start);
+          PARTS_BUFFER[partCount] = decodedData.slice(start);
+          partCount = (partCount + 1) | 0;
         }
         break;
       }
       
       if (!decodedData.startsWith(HASH + EQUALS, start)) {
-        PARTS_BUFFER[partCount++] = decodedData.slice(start, end);
+        PARTS_BUFFER[partCount] = decodedData.slice(start, end);
+        partCount = (partCount + 1) | 0;
       }
-      start = end + 1;
+      start = (end + 1) | 0;
     }
 
-    // Use insertion sort for small arrays (faster than quicksort for n < 32)
+    // V8 optimization: Use insertion sort for small arrays
     if (partCount > 1) {
       insertionSort(PARTS_BUFFER, 0, partCount - 1);
     }
 
     // Fast string concatenation with known size
     let dataCheckString = PARTS_BUFFER[0];
-    for (let i = 1; i < partCount; i++) {
+    for (let i = 1; i < partCount; i = (i + 1) | 0) {
       dataCheckString += NL + PARTS_BUFFER[i];
     }
 
     const dataBuffer = encoder.encode(dataCheckString);
     const dataHash = await crypto.subtle.sign("HMAC", secretKey, dataBuffer);
     
-    // Ultra-fast hex conversion with manual char codes
+    // Ultra-fast hex conversion with manual char codes and integer math
     const view = new Uint8Array(dataHash);
-    const viewLen = view.length | 0; // V8 hint for integer math
-    for (let i = 0; i < viewLen; i++) {
+    const viewLen = view.length | 0;
+    
+    for (let i = 0; i < viewLen; i = (i + 1) | 0) {
+      const idx = (i << 1) | 0;
       const hex = HEX_CHARS[view[i]];
-      HEX_BUFFER[i << 1] = hex[0];
-      HEX_BUFFER[(i << 1) + 1] = hex[1];
+      HEX_BUFFER[idx] = hex[0];
+      HEX_BUFFER[idx + 1] = hex[1];
     }
-    const hashHex = HEX_BUFFER.join("");
+    
+    const hashHex = HEX_BUFFER.slice(0, viewLen << 1).join("");
 
     if (hashHex !== userHash) {
       throw new Error("Hash mismatch");
     }
 
-    // Fast metadata parsing with minimal allocations
-    const metadata: Record<string, unknown> = Object.create(null); // V8 optimized object
+    // V8 optimization: Create object with consistent shape
+    const metadata = {
+      hash: userHash,
+      auth_date: 0,
+      user: {} as TelegramWebApps.WebAppInitData["user"],
+      query_id: ""
+    };
+
     start = 0;
-    
     while (start < dataLen) {
       const end = decodedData.indexOf(AMP, start);
       const eqPos = decodedData.indexOf(EQUALS, start);
@@ -148,24 +181,24 @@ export default function createValidateWebapp(bot_token: string) {
         const key = decodedData.slice(start, eqPos);
         const value = decodedData.slice(eqPos + 1, end === -1 ? dataLen : end);
         
-        if (key === USER) {
-          const parsedUser = JSON.parse(value);
-          metadata[USER] = {
-            ...parsedUser,
-            id: Number(parsedUser.id) | 0, // V8 hint for integer
-          };
-        } else if (key === AUTH_DATE) {
-          metadata[AUTH_DATE] = Number(value) * 1000; // Convert to milliseconds
-        } else {
-          metadata[key] = value;
+        // V8 optimization: Use switch for better branch prediction
+        switch(key) {
+          case USER:
+            metadata.user = parseUser(value);
+            break;
+          case AUTH_DATE:
+            metadata.auth_date = Number(value) * 1000;
+            break;
+          case "query_id":
+            metadata.query_id = value;
+            break;
         }
       }
       
       if (end === -1) break;
-      start = end + 1;
+      start = (end + 1) | 0;
     }
 
-    metadata[HASH] = userHash;
     return metadata as unknown as TelegramWebApps.WebAppInitData;
   };
 }

@@ -1,0 +1,31 @@
+[[language]]
+name = "typescript"
+shebangs = ["deno"]
+roots = ["deno.json", "deno.jsonc"]
+auto-format = true
+language-servers = ["deno-lsp"]
+formatter = { command = "deno", args = ["fmt", "-"] }
+indent = { tab-width = 4, unit = "  " }
+
+[[language]]
+name = "javascript"
+shebangs = ["deno"]
+roots = ["deno.json", "deno.jsonc"]
+auto-format = true
+language-servers = ["deno-lsp"]
+formatter = { command = "deno", args = ["fmt", "-"] }
+indent = { tab-width = 4, unit = "  " }
+
+[language-server.deno-lsp]
+command = "deno"
+args = ["lsp"]
+[language-server.deno-lsp.config.deno]
+enable = true
+unstable = true
+# suggest.imports.hosts = { "https://deno.land" = true }
+inlayHints.parameterNames.enabled = "all"
+inlayHints.parameterTypes.enabled = true
+inlayHints.variableTypes.enabled = true
+inlayHints.propertyDeclarationTypes.enabled  = true
+inlayHints.functionLikeReturnTypes.enabled = true
+inlayHints.enumMemberValues.enabled = true

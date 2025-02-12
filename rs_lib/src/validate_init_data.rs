@@ -1,8 +1,9 @@
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use thiserror::Error;
-use url::Url;
 use wasm_bindgen::prelude::*;
+use core::hint::black_box;
+use hex;
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -10,59 +11,86 @@ type HmacSha256 = Hmac<Sha256>;
 pub enum ValidationError {
     #[error("Missing required field: {0}")]
     MissingField(String),
-    #[error("Invalid URL: {0}")]
-    InvalidUrl(String),
+    #[error("Invalid query string: {0}")]
+    InvalidQueryString(String),
     #[error("Parse error: {0}")]
     ParseError(String),
 }
 
+#[inline(always)]
 fn validate_init_data_internal(init_data: &str, bot_token: &str) -> Result<bool, ValidationError> {
-    let parsed_url = Url::parse(&format!("https://example.com/?{}", init_data))
-        .map_err(|e| ValidationError::InvalidUrl(e.to_string()))?;
+    if init_data.is_empty() {
+        return Err(ValidationError::InvalidQueryString("empty init data".into()));
+    }
 
-    let query_pairs: Vec<(String, String)> = parsed_url
-        .query_pairs()
-        .map(|(k, v)| (k.to_string(), v.to_string()))
-        .collect();
+    if !init_data.contains('=') || !init_data.contains("hash=") {
+        return Err(ValidationError::MissingField("hash".into()));
+    }
 
-    // Extract hash
-    let hash = query_pairs
-        .iter()
-        .find(|(k, _)| k == "hash")
-        .ok_or_else(|| ValidationError::MissingField("hash".to_string()))?
-        .1
-        .clone();
+    let mut check_pairs = Vec::with_capacity(8);
+    let mut hash = None;
 
-    // Create data check string
-    let mut check_pairs: Vec<(String, String)> = query_pairs
-        .into_iter()
-        .filter(|(k, _)| k != "hash")
-        .collect();
-    check_pairs.sort_by(|a, b| a.0.cmp(&b.0));
+    for pair in init_data.split('&') {
+        if let Some((k, v)) = pair.split_once('=') {
+            if k == "hash" {
+                hash = Some(v.to_string());
+                continue;
+            }
+            check_pairs.push((k.to_string(), v.to_string()));
+        } else {
+            return Err(ValidationError::InvalidQueryString("malformed query pair".into()));
+        }
+    }
 
-    let data_check_string = check_pairs
-        .iter()
-        .map(|(k, v)| format!("{}={}", k, v))
-        .collect::<Vec<String>>()
-        .join("\n");
+    let hash = match hash {
+        Some(h) => h,
+        None => return Err(ValidationError::MissingField("hash".into())),
+    };
+    
+    check_pairs.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+
+    let total_len: usize = check_pairs.iter()
+        .map(|(k, v)| k.len() + v.len() + 2)
+        .sum();
+    let mut data_check_string = String::with_capacity(total_len);
+
+    for (i, (k, v)) in check_pairs.iter().enumerate() {
+        if i > 0 {
+            data_check_string.push('\n');
+        }
+        data_check_string.push_str(k);
+        data_check_string.push('=');
+        data_check_string.push_str(v);
+    }
 
     // Generate secret key
-    let mut secret_key = HmacSha256::new_from_slice(bot_token.as_bytes())
-        .map_err(|e| ValidationError::ParseError(e.to_string()))?;
-    secret_key.update(b"WebAppData");
+    let mut secret_key = match HmacSha256::new_from_slice(bot_token.as_bytes()) {
+        Ok(key) => key,
+        Err(e) => return Err(ValidationError::ParseError(e.to_string())),
+    };
+    secret_key.update(black_box(b"WebAppData"));
     let secret_key = secret_key.finalize().into_bytes();
 
     // Calculate HMAC
-    let mut mac = HmacSha256::new_from_slice(&secret_key)
-        .map_err(|e| ValidationError::ParseError(e.to_string()))?;
+    let mut mac = match HmacSha256::new_from_slice(&secret_key) {
+        Ok(mac) => mac,
+        Err(e) => return Err(ValidationError::ParseError(e.to_string())),
+    };
     mac.update(data_check_string.as_bytes());
+    
     let result = mac.finalize().into_bytes();
-    let calculated_hash = hex::encode(result);
+    
+    // Use stack allocation for hex encoding
+    let mut calculated_hash = [0u8; 64];
+    if let Err(e) = hex::encode_to_slice(&result, &mut calculated_hash) {
+        return Err(ValidationError::ParseError(e.to_string()));
+    }
 
-    Ok(calculated_hash == hash)
+    Ok(hash.as_bytes() == &calculated_hash[..hash.len()])
 }
 
 #[wasm_bindgen]
+#[inline]
 pub fn validate_init_data(init_data: &str, bot_token: &str) -> Result<bool, JsError> {
     validate_init_data_internal(init_data, bot_token).map_err(Into::into)
 }

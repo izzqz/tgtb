@@ -1,1 +1,8 @@
 /target
+
+# Coverage data
+/coverage/
+*.profraw
+*.profdata
+*.gcda
+*.gcno

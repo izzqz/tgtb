@@ -1,0 +1,51 @@
+{
+  "version": "4",
+  "specifiers": {
+    "jsr:@std/assert@*": "1.0.11",
+    "jsr:@std/assert@^1.0.10": "1.0.11",
+    "jsr:@std/collections@*": "1.0.9",
+    "jsr:@std/internal@^1.0.5": "1.0.5",
+    "jsr:@std/testing@*": "1.0.9",
+    "npm:telegram-bot-api-types@*": "8.1.0"
+  },
+  "jsr": {
+    "@std/assert@1.0.11": {
+      "integrity": "2461ef3c368fe88bc60e186e7744a93112f16fd110022e113a0849e94d1c83c1",
+      "dependencies": [
+        "jsr:@std/internal"
+      ]
+    },
+    "@std/collections@1.0.9": {
+      "integrity": "4f58104ead08a04a2199374247f07befe50ba01d9cca8cbb23ab9a0419921e71"
+    },
+    "@std/internal@1.0.5": {
+      "integrity": "54a546004f769c1ac9e025abd15a76b6671ddc9687e2313b67376125650dc7ba"
+    },
+    "@std/testing@1.0.9": {
+      "integrity": "9bdd4ac07cb13e7594ac30e90f6ceef7254ac83a9aeaa089be0008f33aab5cd4",
+      "dependencies": [
+        "jsr:@std/assert@^1.0.10",
+        "jsr:@std/internal"
+      ]
+    }
+  },
+  "npm": {
+    "telegram-bot-api-types@8.1.0": {
+      "integrity": "sha512-CaPLzYORotm7mbd8c6UKHxOcEwvgrL8MDgyRx5rC7IrYYRd1zmy8+8jsPcP8P0v3X7rAmp5ew7obNlqSBM5dKw=="
+    }
+  },
+  "remote": {
+    "https://raw.githubusercontent.com/grammyjs/types/refs/heads/main/api.ts": "ae04d6628e3d25ae805bc07a19475065044fc44cde0a40877405bc3544d03a5f",
+    "https://raw.githubusercontent.com/grammyjs/types/refs/heads/main/inline.ts": "9afd0340eafd22acb163f2f680d58b85719f0edc92dffa4d259fc5232e543d23",
+    "https://raw.githubusercontent.com/grammyjs/types/refs/heads/main/langs.ts": "5f5fd09c58ba3ae942dd7cea2696f95587d2032c1829bba4bca81762b7ef73b6",
+    "https://raw.githubusercontent.com/grammyjs/types/refs/heads/main/manage.ts": "a4ed0c42e9e8157c26eae09ea58bc2f015b6b5322f6624db1c8deb55b5d3aed4",
+    "https://raw.githubusercontent.com/grammyjs/types/refs/heads/main/markup.ts": "b989e0712f9731c59e6cb308371b1722d823dd55de3d6bcaf3e4ed645a42e1f9",
+    "https://raw.githubusercontent.com/grammyjs/types/refs/heads/main/message.ts": "301d280cfc8cca3283cfe639ccd334941bb299475eb14084ca9233ceb582507f",
+    "https://raw.githubusercontent.com/grammyjs/types/refs/heads/main/methods.ts": "73fd005a79bc291f33622fafefd99ba40ee7eb1ede92ac5957afc586a6e355af",
+    "https://raw.githubusercontent.com/grammyjs/types/refs/heads/main/mod.ts": "7ecea1d3f7085d64419b78183039c78d70d655aeaa8b07f118ffbfb823f5b0b7",
+    "https://raw.githubusercontent.com/grammyjs/types/refs/heads/main/passport.ts": "19820e7d6c279521f8bc8912d6a378239f73d4ab525453808994b5f44ef95215",
+    "https://raw.githubusercontent.com/grammyjs/types/refs/heads/main/payment.ts": "1ecf4f6d6bd89e8ac0c1731ca3ed593df64598156149b27372a0222dadbb593a",
+    "https://raw.githubusercontent.com/grammyjs/types/refs/heads/main/settings.ts": "f8ff810da6f1007ed24cd504809bf46820229c395ff9bfc3e5c8ceaef5b2aae1",
+    "https://raw.githubusercontent.com/grammyjs/types/refs/heads/main/update.ts": "71cc0d5ec860149b71415ba03282b1d7edd0466b36e2789521a3b3a3d7796493"
+  }
+}

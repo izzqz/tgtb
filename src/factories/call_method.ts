@@ -1,19 +1,19 @@
-import { type TgtbOptions } from "../mod.ts";
-import type { ApiMethods } from "../types/telegram.ts";
-
-type BotMethodKeys = keyof ApiMethods<unknown>;
-type BotMethodParams<M extends BotMethodKeys> = Parameters<ApiMethods<unknown>[M]>[0];
-type BotMethodReturn<M extends BotMethodKeys> = ReturnType<ApiMethods<unknown>[M]>;
+import type { 
+  BotMethodKeys, 
+  BotMethodParams,
+  TgtbConfig,
+  BotMethodResponse
+} from "../types/api.ts";
 
 export default function buildCallMethod(
   bot_token: string,
-  options: Required<TgtbOptions>,
+  options: TgtbConfig,
 ) {
   const { fetch_fn, base_url } = options;
   return async <M extends BotMethodKeys>(
     method: M,
     params?: BotMethodParams<M>,
-  ): Promise<BotMethodReturn<M>> => {
+  ): Promise<BotMethodResponse<M>> => {
     const url = new URL(base_url.concat(bot_token, "/", method));
 
     // append params
@@ -28,7 +28,7 @@ export default function buildCallMethod(
     }
 
     const response = await fetch_fn(url.toString());
-    const result = await response.json();
+    const result = await response.json() as BotMethodResponse<M>;
 
     return result;
   };

@@ -1,6 +1,6 @@
 use core::hint::black_box;
 use hmac::{Hmac, Mac};
-use js_sys::{Function, Promise};
+use js_sys::{Function, Promise, Error as JsError};
 use sha2::Sha256;
 use thiserror::Error;
 use wasm_bindgen::prelude::*;
@@ -33,14 +33,14 @@ pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
       let promise = Promise::new(&mut |resolve, reject| {
         if init_data.is_empty() {
           reject
-            .call1(&JsValue::NULL, &JsValue::from_str("empty init data"))
+            .call1(&JsValue::NULL, &JsError::new("empty init data").as_ref())
             .unwrap();
           return;
         }
 
         if !init_data.contains('=') || !init_data.contains("hash=") {
           reject
-            .call1(&JsValue::NULL, &JsValue::from_str("missing hash field"))
+            .call1(&JsValue::NULL, &JsError::new("missing hash field").as_ref())
             .unwrap();
           return;
         }
@@ -57,7 +57,7 @@ pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
             check_pairs.push((k.to_string(), v.to_string()));
           } else {
             reject
-              .call1(&JsValue::NULL, &JsValue::from_str("malformed query pair"))
+              .call1(&JsValue::NULL, &JsError::new("malformed query pair").as_ref())
               .unwrap();
             return;
           }
@@ -67,7 +67,7 @@ pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
           Some(h) => h,
           None => {
             reject
-              .call1(&JsValue::NULL, &JsValue::from_str("missing hash field"))
+              .call1(&JsValue::NULL, &JsError::new("missing hash field").as_ref())
               .unwrap();
             return;
           }
@@ -93,7 +93,7 @@ pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
           Ok(m) => m,
           Err(e) => {
             reject
-              .call1(&JsValue::NULL, &JsValue::from_str(&e.to_string()))
+              .call1(&JsValue::NULL, &JsError::new(&e.to_string()).as_ref())
               .unwrap();
             return;
           }
@@ -106,7 +106,7 @@ pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
         let mut calculated_hash = [0u8; 64];
         if let Err(e) = hex::encode_to_slice(result, &mut calculated_hash) {
           reject
-            .call1(&JsValue::NULL, &JsValue::from_str(&e.to_string()))
+            .call1(&JsValue::NULL, &JsError::new(&e.to_string()).as_ref())
             .unwrap();
           return;
         }

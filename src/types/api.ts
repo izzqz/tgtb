@@ -1,5 +1,7 @@
 import type { ApiMethods, ApiResponse, Opts } from "./telegram.ts";
 
+export type { ApiMethods, ApiResponse, Opts } from "./telegram.ts";
+
 export type BotMethodKeys<F> = keyof ApiMethods<F>;
 export type BotMethodParams<F, M extends BotMethodKeys<F>> = Parameters<ApiMethods<F>[M]>[0];
 export type BotMethodReturn<F, M extends BotMethodKeys<F>> = ReturnType<ApiMethods<F>[M]>;
@@ -10,7 +12,7 @@ export interface TgtbClient<F = unknown> {
     method: M,
     params?: Opts<F>[M]
   ) => Promise<ApiResponse<ReturnType<ApiMethods<F>[M]>>>;
-  isInitDataValid: (init_data: string) => boolean;
+  isInitDataValid: (init_data: string) => Promise<boolean>;
 }
 
 export interface TgtbOptions {

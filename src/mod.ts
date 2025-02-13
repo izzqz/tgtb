@@ -24,11 +24,4 @@ export default function tgtb(bot_token: string, options?: TgtbOptions): TgtbClie
   };
 }
 
-const bot = tgtb("123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11");
-
-const res = await bot.callMethod("sendMessage", {
-  chat_id: 1234567,
-  text: 'haha'
-});
-
 export * as types from "./types/telegram.ts";

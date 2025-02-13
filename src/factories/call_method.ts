@@ -1,8 +1,9 @@
 import type { 
   BotMethodKeys, 
-  BotMethodParams,
   TgtbConfig,
-  BotMethodResponse
+  ApiMethods,
+  ApiResponse,
+  Opts
 } from "../types/api.ts";
 
 export default function buildCallMethod(
@@ -10,10 +11,10 @@ export default function buildCallMethod(
   options: TgtbConfig,
 ) {
   const { fetch_fn, base_url } = options;
-  return async <M extends BotMethodKeys>(
+  return async <M extends BotMethodKeys<F>, F = unknown>(
     method: M,
-    params?: BotMethodParams<M>,
-  ): Promise<BotMethodResponse<M>> => {
+    params?: Opts<F>[M]
+  ): Promise<ApiResponse<ReturnType<ApiMethods<F>[M]>>> => {
     const url = new URL(base_url.concat(bot_token, "/", method));
 
     // append params
@@ -28,7 +29,7 @@ export default function buildCallMethod(
     }
 
     const response = await fetch_fn(url.toString());
-    const result = await response.json() as BotMethodResponse<M>;
+    const result = await response.json() as ApiResponse<ReturnType<ApiMethods<F>[M]>>;
 
     return result;
   };

@@ -1,6 +1,7 @@
 import buildCallMethod from "./factories/call_method.ts";
 
 import { deepMerge } from "jsr:@std/collections/deep-merge";
+import { create_validator } from "../lib/tg_validator.js";
 
 export interface TgtbOptions {
   fetch_fn?: typeof fetch;
@@ -20,6 +21,7 @@ export default function tgtb(bot_token: string, options?: TgtbOptions) {
 
   return {
     callMethod: buildCallMethod(bot_token, mergedOptions),
+    isInitDataValid: create_validator(bot_token),
   };
 }
 

@@ -17,14 +17,15 @@ pub enum ValidationError {
     ParseError(String),
 }
 
-#[inline(always)]
-fn validate_init_data_internal(init_data: &str, bot_token: &str) -> Result<bool, ValidationError> {
+#[wasm_bindgen]
+#[inline]
+pub fn validate_init_data(init_data: &str, bot_token: &str) -> Result<bool, JsError> {
     if init_data.is_empty() {
-        return Err(ValidationError::InvalidQueryString("empty init data".into()));
+        return Err(JsError::new("empty init data"));
     }
 
     if !init_data.contains('=') || !init_data.contains("hash=") {
-        return Err(ValidationError::MissingField("hash".into()));
+        return Err(JsError::new("missing hash field"));
     }
 
     let mut check_pairs = Vec::with_capacity(8);
@@ -38,13 +39,13 @@ fn validate_init_data_internal(init_data: &str, bot_token: &str) -> Result<bool,
             }
             check_pairs.push((k.to_string(), v.to_string()));
         } else {
-            return Err(ValidationError::InvalidQueryString("malformed query pair".into()));
+            return Err(JsError::new("malformed query pair"));
         }
     }
 
     let hash = match hash {
         Some(h) => h,
-        None => return Err(ValidationError::MissingField("hash".into())),
+        None => return Err(JsError::new("missing hash field")),
     };
     
     check_pairs.sort_unstable_by(|a, b| a.0.cmp(&b.0));
@@ -64,66 +65,99 @@ fn validate_init_data_internal(init_data: &str, bot_token: &str) -> Result<bool,
     }
 
     // Generate secret key
-    let mut secret_key = match HmacSha256::new_from_slice(bot_token.as_bytes()) {
-        Ok(key) => key,
-        Err(e) => return Err(ValidationError::ParseError(e.to_string())),
-    };
+    let mut secret_key = HmacSha256::new_from_slice(bot_token.as_bytes())
+        .map_err(|e| JsError::new(&e.to_string()))?;
     secret_key.update(black_box(b"WebAppData"));
     let secret_key = secret_key.finalize().into_bytes();
 
     // Calculate HMAC
-    let mut mac = match HmacSha256::new_from_slice(&secret_key) {
-        Ok(mac) => mac,
-        Err(e) => return Err(ValidationError::ParseError(e.to_string())),
-    };
+    let mut mac = HmacSha256::new_from_slice(&secret_key)
+        .map_err(|e| JsError::new(&e.to_string()))?;
     mac.update(data_check_string.as_bytes());
     
     let result = mac.finalize().into_bytes();
     
     // Use stack allocation for hex encoding
     let mut calculated_hash = [0u8; 64];
-    if let Err(e) = hex::encode_to_slice(&result, &mut calculated_hash) {
-        return Err(ValidationError::ParseError(e.to_string()));
-    }
+    hex::encode_to_slice(&result, &mut calculated_hash)
+        .map_err(|e| JsError::new(&e.to_string()))?;
 
     Ok(hash.as_bytes() == &calculated_hash[..hash.len()])
-}
-
-#[wasm_bindgen]
-#[inline]
-pub fn validate_init_data(init_data: &str, bot_token: &str) -> Result<bool, JsError> {
-    validate_init_data_internal(init_data, bot_token).map_err(Into::into)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use wasm_bindgen_test::*;
 
-    #[test]
+    // Core functionality tests
+    #[wasm_bindgen_test]
     fn test_valid_init_data() {
         let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
-        let init_data = "query_id=AAHdF6IQAAAAAN0XohDhrOrc&user=%7B%22id%22%3A1234567890%2C%22first_name%22%3A%22John%22%2C%22last_name%22%3A%22Doe%22%2C%22username%22%3A%22johndoe%22%2C%22language_code%22%3A%22en%22%7D&auth_date=1234567890&hash=c0d3e6c3ca85c0d3c7e6a7b8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7";
+        let init_data = "auth_date=1234567890&query_id=AAHdF6IQAAAAAN0XohDhrOrc&user=%7B%22id%22%3A1234567890%2C%22first_name%22%3A%22John%22%2C%22last_name%22%3A%22Doe%22%2C%22username%22%3A%22johndoe%22%2C%22language_code%22%3A%22en%22%7D&hash=c0d3e6c3ca85c0d3c7e6a7b8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7";
 
-        let result = validate_init_data_internal(init_data, bot_token);
+        let result = validate_init_data(init_data, bot_token);
         assert!(result.is_ok());
+        assert!(!result.unwrap()); // Since we don't have a real hash
     }
 
-    #[test]
+    #[wasm_bindgen_test]
     fn test_invalid_hash() {
         let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
         let init_data = "query_id=AAHdF6IQAAAAAN0XohDhrOrc&user=%7B%22id%22%3A1234567890%7D&auth_date=1234567890&hash=invalid";
 
-        let result = validate_init_data_internal(init_data, bot_token);
+        let result = validate_init_data(init_data, bot_token);
         assert!(result.is_ok());
         assert!(!result.unwrap());
     }
 
-    #[test]
+    #[wasm_bindgen_test]
     fn test_missing_hash() {
         let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
         let init_data = "query_id=AAHdF6IQAAAAAN0XohDhrOrc&user=%7B%22id%22%3A1234567890%7D&auth_date=1234567890";
 
-        let result = validate_init_data_internal(init_data, bot_token);
+        let result = validate_init_data(init_data, bot_token);
+        assert!(result.is_err());
+    }
+
+    #[wasm_bindgen_test]
+    fn test_empty_init_data() {
+        let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+        let result = validate_init_data("", bot_token);
+        assert!(result.is_err());
+    }
+
+    #[wasm_bindgen_test]
+    fn test_malformed_query_pair() {
+        let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+        let init_data = "query_id&user=test&hash=abc";
+        let result = validate_init_data(init_data, bot_token);
+        assert!(result.is_err());
+    }
+
+    #[wasm_bindgen_test]
+    fn test_no_equals_in_query() {
+        let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+        let init_data = "queryidtest";
+        
+        let result = validate_init_data(init_data, bot_token);
+        assert!(result.is_err());
+    }
+
+    // WASM binding tests
+    #[wasm_bindgen_test]
+    fn test_wasm_valid() {
+        let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+        let init_data = "query_id=test&hash=test";
+        let result = validate_init_data(init_data, bot_token);
+        assert!(result.is_ok());
+    }
+
+    #[wasm_bindgen_test]
+    fn test_wasm_error() {
+        let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+        let init_data = "";
+        let result = validate_init_data(init_data, bot_token);
         assert!(result.is_err());
     }
 }

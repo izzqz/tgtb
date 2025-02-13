@@ -14,33 +14,11 @@ Deno.test("validate_webapp", async (t) => {
     assertEquals(result, true);
   });
 
-  await t.step("should reject init data with valid structure but invalid hash", () => {
-    const initData = "auth_date=1234567890&query_id=AAHdF6IQAAAAAN0XohDhrOrc&user=%7B%22id%22%3A1234567890%2C%22first_name%22%3A%22John%22%2C%22last_name%22%3A%22Doe%22%2C%22username%22%3A%22johndoe%22%2C%22language_code%22%3A%22en%22%7D&hash=c0d3e6c3ca85c0d3c7e6a7b8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7";
-    
+  await t.step("should reject empty bot token", () => {
     assertThrows(
-      () => client.isInitDataValid(initData),
+      () => tgtb(""),
       Error,
-      "hash mismatch"
-    );
-  });
-
-  await t.step("should reject invalid hash", () => {
-    const initData = "query_id=AAHdF6IQAAAAAN0XohDhrOrc&user=%7B%22id%22%3A1234567890%7D&auth_date=1234567890&hash=invalid";
-    
-    assertThrows(
-      () => client.isInitDataValid(initData),
-      Error,
-      "hash mismatch"
-    );
-  });
-
-  await t.step("should reject missing hash", () => {
-    const initData = "query_id=AAHdF6IQAAAAAN0XohDhrOrc&user=%7B%22id%22%3A1234567890%7D&auth_date=1234567890";
-    
-    assertThrows(
-      () => client.isInitDataValid(initData),
-      Error,
-      "missing hash field"
+      "Invalid bot token"
     );
   });
 
@@ -48,12 +26,52 @@ Deno.test("validate_webapp", async (t) => {
     assertThrows(
       () => client.isInitDataValid(""),
       Error,
-      "empty init data"
+      "init_data is empty"
+    );
+  });
+
+  await t.step("should reject missing hash field", () => {
+    const initData = "query_id=AAHdF6IQAAAAAN0XohDhrOrc&user=%7B%22id%22%3A1234567890%7D&auth_date=1234567890";
+    
+    assertThrows(
+      () => client.isInitDataValid(initData),
+      Error,
+      "hash field not found"
+    );
+  });
+
+  await t.step("should reject empty hash", () => {
+    const initData = "query_id=test&hash=";
+    
+    assertThrows(
+      () => client.isInitDataValid(initData),
+      Error,
+      "hash is empty"
+    );
+  });
+
+  await t.step("should reject non-hex hash characters", () => {
+    const initData = "query_id=test&hash=xyz123";
+    
+    assertThrows(
+      () => client.isInitDataValid(initData),
+      Error,
+      "hash contains non-hex characters"
+    );
+  });
+
+  await t.step("should reject incorrect hash length", () => {
+    const initData = "query_id=test&hash=abc123";
+    
+    assertThrows(
+      () => client.isInitDataValid(initData),
+      Error,
+      "hash length is 6, expected 64"
     );
   });
 
   await t.step("should reject malformed query pair", () => {
-    const initData = "query_id&user=test&hash=abc";
+    const initData = "query_id&user=test&hash=" + "a".repeat(64);
     
     assertThrows(
       () => client.isInitDataValid(initData),
@@ -62,13 +80,39 @@ Deno.test("validate_webapp", async (t) => {
     );
   });
 
-  await t.step("should reject query without equals sign", () => {
-    const initData = "queryidtest";
+  await t.step("should reject invalid URL encoding", () => {
+    const initData = "query_id=test&user=%invalid%&hash=" + "0".repeat(64);
     
     assertThrows(
       () => client.isInitDataValid(initData),
       Error,
-      "missing hash field"
+      "Hash verification failed"
+    );
+  });
+
+  await t.step("should reject hash verification failure", () => {
+    const initData = "query_id=test&user=test&hash=" + "0".repeat(64);
+    
+    assertThrows(
+      () => client.isInitDataValid(initData),
+      Error,
+      "Hash verification failed"
+    );
+  });
+
+  await t.step("should handle large input data", () => {
+    const largeUser = {
+      id: 123456789,
+      first_name: "A".repeat(1000),
+      last_name: "B".repeat(1000),
+      username: "C".repeat(100),
+    };
+    const initData = `query_id=test&user=${encodeURIComponent(JSON.stringify(largeUser))}&hash=${"0".repeat(64)}`;
+    
+    assertThrows(
+      () => client.isInitDataValid(initData),
+      Error,
+      "Hash verification failed"
     );
   });
 
@@ -79,12 +123,82 @@ Deno.test("validate_webapp", async (t) => {
       "%22username%22%3A%22testuser%22%2C%22language_code%22%3A%22en%22%7D" +
       "&auth_date=1707116400" +
       "&start_param=test_start" +
-      "&hash=c0d3e6c3ca85c0d3c7e6a7b8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7";
+      "&hash=" + "0".repeat(64);
 
     assertThrows(
       () => client.isInitDataValid(initData),
       Error,
-      "hash mismatch"
+      "Hash verification failed"
+    );
+  });
+
+  await t.step("should reject hash as first parameter", () => {
+    const initData = `hash=${"0".repeat(64)}&auth_date=123`;
+    
+    assertThrows(
+      () => client.isInitDataValid(initData),
+      Error,
+      "hash field not found"
+    );
+  });
+
+  await t.step("should reject parameters after hash", () => {
+    const initData = `auth_date=123&hash=${"0".repeat(64)}&foo=bar`;
+    
+    assertThrows(
+      () => client.isInitDataValid(initData),
+      Error,
+      "Invalid hash format: hash contains non-hex characters"
+    );
+  });
+
+  await t.step("should handle case-insensitive key sorting", () => {
+    const initData = `B=2&a=1&hash=${"0".repeat(64)}`;
+    
+    assertThrows(
+      () => client.isInitDataValid(initData),
+      Error,
+      "Hash verification failed"
+    );
+  });
+
+  await t.step("should handle encoded special characters", () => {
+    const initData = `key%3D=value%26&hash=${"0".repeat(64)}`;
+    
+    assertThrows(
+      () => client.isInitDataValid(initData),
+      Error,
+      "Hash verification failed"
+    );
+  });
+
+  await t.step("should handle empty key or value", () => {
+    const initData = `=value&key=&hash=${"0".repeat(64)}`;
+    
+    assertThrows(
+      () => client.isInitDataValid(initData),
+      Error,
+      "Hash verification failed"
+    );
+  });
+
+  await t.step("should handle multiple equals in pair", () => {
+    const initData = `key=val=ue&hash=${"0".repeat(64)}`;
+    
+    assertThrows(
+      () => client.isInitDataValid(initData),
+      Error,
+      "Hash verification failed"
+    );
+  });
+
+  await t.step("should reject multiple hash parameters", () => {
+    const initData = `hash=invalid&hash=${"0".repeat(64)}`;
+    
+    assertThrows(
+      () => client.isInitDataValid(initData),
+      Error,
+      "Hash verification failed"
     );
   });
 });

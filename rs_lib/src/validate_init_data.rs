@@ -15,19 +15,49 @@ pub enum ValidationError {
   InvalidQueryString(String),
   #[error("Parse error: {0}")]
   ParseError(String),
+  #[error("Invalid hash format: {0}")]
+  InvalidHashFormat(String),
+  #[error("Hash verification failed")]
+  HashVerificationFailed,
+  #[error("Invalid bot token")]
+  InvalidBotToken,
+  #[error("Memory allocation error: {0}")]
+  MemoryError(String),
+}
+
+impl From<ValidationError> for JsError {
+  fn from(err: ValidationError) -> Self {
+    JsError::new(&err.to_string())
+  }
 }
 
 const WEBAPPDATA: &[u8] = b"WebAppData";
 const CAPACITY: usize = 32; // Reasonable default for query params
 
 /// Extracts the hash from init data string
-fn extract_hash(init_data: &str) -> Result<(String, String), JsError> {
+fn extract_hash(init_data: &str) -> Result<(String, String), ValidationError> {
+    if init_data.is_empty() {
+        return Err(ValidationError::MissingField("init_data is empty".to_string()));
+    }
+
     let (base_data, hash) = if let Some(pos) = init_data.find("&hash=") {
         let (base, hash_part) = init_data.split_at(pos);
         let hash = &hash_part[6..]; // Skip "&hash="
+        
+        // Validate hash format
+        if hash.is_empty() {
+            return Err(ValidationError::InvalidHashFormat("hash is empty".to_string()));
+        }
+        if !hash.chars().all(|c| c.is_ascii_hexdigit()) {
+            return Err(ValidationError::InvalidHashFormat("hash contains non-hex characters".to_string()));
+        }
+        if hash.len() != 64 {
+            return Err(ValidationError::InvalidHashFormat(format!("hash length is {}, expected 64", hash.len())));
+        }
+        
         (base.to_string(), hash.to_string())
     } else {
-        return Err(JsError::new("missing hash field"));
+        return Err(ValidationError::MissingField("hash field not found".to_string()));
     };
 
     Ok((base_data, hash))
@@ -35,92 +65,90 @@ fn extract_hash(init_data: &str) -> Result<(String, String), JsError> {
 
 #[wasm_bindgen]
 pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
+  if bot_token.is_empty() {
+    return Err(ValidationError::InvalidBotToken.into());
+  }
+
   // Pre-compute the secret key once
   let mut secret = HmacSha256::new_from_slice(WEBAPPDATA)
-    .map_err(|e| JsError::new(&e.to_string()))?;
+    .map_err(|e| ValidationError::ParseError(e.to_string()))?;
   secret.update(bot_token.as_bytes());
   let secret_key = secret.finalize().into_bytes();
   
   // Create closure that returns bool directly and throws JsError
   let validate_fn = Closure::wrap(Box::new(move |init_data: String| -> bool {
-    if init_data.is_empty() {
-      wasm_bindgen::throw_val(JsValue::from(JsError::new("empty init data")));
-    }
+    let result = (|| -> Result<bool, ValidationError> {
+      if init_data.is_empty() {
+        return Err(ValidationError::MissingField("init_data is empty".to_string()));
+      }
 
-    // Extract hash first
-    let (base_data, hash) = match extract_hash(&init_data) {
-      Ok(result) => result,
+      // Extract hash first
+      let (base_data, hash) = extract_hash(&init_data)?;
+
+      // Pre-allocate vector with estimated capacity
+      let mut arr = Vec::with_capacity(CAPACITY);
+      
+      // Process base data and validate query pairs
+      for pair in base_data.split('&') {
+        if !pair.contains('=') {
+          return Err(ValidationError::InvalidQueryString("malformed query pair".to_string()));
+        }
+
+        // URL decode the pair
+        let decoded_pair = percent_decode_str(pair)
+          .decode_utf8()
+          .map_err(|e| ValidationError::ParseError(e.to_string()))?
+          .to_string();
+
+        arr.push(decoded_pair);
+      }
+
+      // Sort array in-place using faster ascii comparison
+      arr.sort_unstable_by(|a, b| {
+        a.bytes()
+          .map(|b| b.to_ascii_lowercase())
+          .cmp(b.bytes().map(|b| b.to_ascii_lowercase()))
+      });
+
+      // Join with newlines - pre-calculate capacity
+      let total_len = arr.iter().map(|s| s.len()).sum::<usize>() + arr.len() - 1;
+      let mut data_check_string = String::with_capacity(total_len);
+      
+      for (i, s) in arr.iter().enumerate() {
+        if i > 0 {
+          data_check_string.push('\n');
+        }
+        data_check_string.push_str(s);
+      }
+
+      // Calculate HMAC using the digest from the first HMAC as the key
+      let mut mac = HmacSha256::new_from_slice(&secret_key)
+        .map_err(|e| ValidationError::ParseError(e.to_string()))?;
+
+      mac.update(data_check_string.as_bytes());
+      let result = mac.finalize().into_bytes();
+
+      // Use stack allocation for hex encoding
+      let mut calculated_hash = [0u8; 64];
+      hex::encode_to_slice(result, &mut calculated_hash)
+        .map_err(|e| ValidationError::ParseError(e.to_string()))?;
+
+      let calculated_hash_str = std::str::from_utf8(&calculated_hash[..hash.len()])
+        .map_err(|e| ValidationError::ParseError(e.to_string()))?;
+
+      if calculated_hash_str != hash {
+        return Err(ValidationError::HashVerificationFailed);
+      }
+
+      Ok(true)
+    })();
+
+    match result {
+      Ok(valid) => valid,
       Err(e) => {
-        wasm_bindgen::throw_val(JsValue::from(e));
+        wasm_bindgen::throw_val(JsValue::from(JsError::from(e)));
       }
-    };
-
-    // Pre-allocate vector with estimated capacity
-    let mut arr = Vec::with_capacity(CAPACITY);
-    
-    // Process base data and validate query pairs
-    for pair in base_data.split('&') {
-      if !pair.contains('=') {
-        wasm_bindgen::throw_val(JsValue::from(JsError::new("malformed query pair")));
-      }
-
-      // URL decode the pair
-      let decoded_pair = match percent_decode_str(pair).decode_utf8() {
-        Ok(decoded) => decoded.to_string(),
-        Err(_) => pair.to_string(),
-      };
-
-      arr.push(decoded_pair);
     }
-
-    // Validate hash format after query validation
-    if !hash.chars().all(|c| c.is_ascii_hexdigit()) || hash.len() != 64 {
-      wasm_bindgen::throw_val(JsValue::from(JsError::new("hash mismatch")));
-    }
-
-    // Sort array in-place using faster ascii comparison
-    arr.sort_unstable_by(|a, b| {
-      a.bytes()
-        .map(|b| b.to_ascii_lowercase())
-        .cmp(b.bytes().map(|b| b.to_ascii_lowercase()))
-    });
-
-    // Join with newlines - pre-calculate capacity
-    let total_len = arr.iter().map(|s| s.len()).sum::<usize>() + arr.len() - 1;
-    let mut data_check_string = String::with_capacity(total_len);
-    
-    for (i, s) in arr.iter().enumerate() {
-      if i > 0 {
-        data_check_string.push('\n');
-      }
-      data_check_string.push_str(s);
-    }
-
-    // Calculate HMAC using the digest from the first HMAC as the key
-    let mut mac = match HmacSha256::new_from_slice(&secret_key) {
-      Ok(m) => m,
-      Err(e) => {
-        wasm_bindgen::throw_val(JsValue::from(JsError::new(&e.to_string())));
-      }
-    };
-
-    mac.update(data_check_string.as_bytes());
-    let result = mac.finalize().into_bytes();
-
-    // Use stack allocation for hex encoding
-    let mut calculated_hash = [0u8; 64];
-    if let Err(e) = hex::encode_to_slice(result, &mut calculated_hash) {
-      wasm_bindgen::throw_val(JsValue::from(JsError::new(&e.to_string())));
-    }
-
-    let calculated_hash_str = std::str::from_utf8(&calculated_hash[..hash.len()]).unwrap_or("invalid utf8");
-
-    let is_valid = calculated_hash_str == hash;
-    if !is_valid {
-      wasm_bindgen::throw_val(JsValue::from(JsError::new("hash mismatch")));
-    }
-
-    true
   }) as Box<dyn Fn(String) -> bool>);
 
   Ok(validate_fn.into_js_value().unchecked_into())

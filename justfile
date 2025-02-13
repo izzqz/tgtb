@@ -10,6 +10,8 @@ wasm-test:
 
 lint:
     cargo clippy
+    deno check . --all
+    deno lint
 
 fmt:
     cargo fmt --all

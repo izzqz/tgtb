@@ -3,7 +3,7 @@ import { faker } from "jsr:@jackfiszr/faker@1.1.6";
 const BOT_TOKEN_CHARS =
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-".split("");
 
-export function randomBotToken(bot_id?: number) {
+export function randomBotToken(bot_id?: number): string {
   const botId = bot_id ?? randomBotId();
   const botHash = Array.from(
     { length: 35 },
@@ -13,11 +13,11 @@ export function randomBotToken(bot_id?: number) {
   return `${botId}:${botHash}`;
 }
 
-export function randomBotId() {
+export function randomBotId(): number {
   return faker.random.number({ min: 10000000, max: 9999999999 });
 }
 
-export function randomBotUsername() {
+export function randomBotUsername(): string {
   // Generate base name (2-29 chars to accommodate 'bot' suffix)
   const baseLength = faker.random.number({ min: 2, max: 28 });
   let baseName = faker.random.word()

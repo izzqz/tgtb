@@ -1,3 +1,4 @@
+// deno-lint-ignore-file require-await
 import { assertEquals, assertRejects } from "jsr:@std/assert@1";
 import { beforeEach, describe, it } from "jsr:@std/testing/bdd";
 
@@ -12,7 +13,6 @@ describe("callMethod", () => {
 
   beforeEach(() => {
     // Reset mock for each test
-    // deno-lint-ignore require-await
     mockFetch = async (_input: string | URL | Request) => {
       return new Response(
         JSON.stringify({ ok: true, result: { test: "success" } }),

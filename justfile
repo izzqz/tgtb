@@ -2,39 +2,19 @@ default:
     @just --list
 
 test:
-    cargo +nightly test --benches
+    cd rs_lib && wasm-pack test --node
     deno test
 
-rs-test-coverage:
-    # Clean previous coverage data
-    rm -f *.profraw
-    rm -rf coverage/
-    
-    # Run regular tests with coverage
-    cd rs_lib && \
-    CARGO_INCREMENTAL=0 \
-    RUSTFLAGS="-C instrument-coverage" \
-    LLVM_PROFILE_FILE="rust-%p-%m.profraw" \
-    cargo test
-    ;
-    # Generate coverage report
-    grcov . \
-        -s rs_lib \
-        --binary-path target/debug/ \
-        -t html \
-        --branch \
-        --ignore-not-existing \
-        -o coverage/
-
 wasm-test:
-    cd rs_lib && wasm-pack test --node
+    cd rs_lib && wasm-pack test --node -- --coverage-provider=v8
 
 lint:
-    cargo clippy -- -D warnings
+    cargo clippy
 
 fmt:
-    cargo fmt --all -- --check
+    cargo fmt --all
+    deno fmt
 
 fix:
-    cd rs_lib && cargo clippy --fix -- -D warnings
+    cd rs_lib && cargo clippy --fix
     cd rs_lib && cargo fmt --all

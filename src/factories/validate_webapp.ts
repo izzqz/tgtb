@@ -47,7 +47,11 @@ function insertionSort(arr: string[], left: number, right: number): void {
 
 export default function createValidateWebapp(bot_token: string) {
   "use strict";
-  const secretKeyPromise = crypto.subtle.sign("HMAC", WEBAPP_KEY, encoder.encode(bot_token));
+  const secretKeyPromise = crypto.subtle.sign(
+    "HMAC",
+    WEBAPP_KEY,
+    encoder.encode(bot_token),
+  );
   let secretKey: CryptoKey;
 
   // V8 optimization: Monomorphic function with consistent property access
@@ -65,12 +69,14 @@ export default function createValidateWebapp(bot_token: string) {
     };
   };
 
-  return async function validateWebapp(init_data: string): Promise<TelegramWebApps.WebAppInitData> {
+  return async function validateWebapp(
+    init_data: string,
+  ): Promise<TelegramWebApps.WebAppInitData> {
     if (!init_data) throw new TypeError("InitData is nullish");
 
     // V8 optimization: Cache length for loop optimization
     const dataLen = init_data.length | 0;
-    
+
     // Initialize secret key if not done yet (V8 optimized branch prediction)
     if (!secretKey) {
       secretKey = await crypto.subtle.importKey(
@@ -78,25 +84,27 @@ export default function createValidateWebapp(bot_token: string) {
         await secretKeyPromise,
         { name: "HMAC", hash: "SHA-256" },
         false,
-        ["sign"]
+        ["sign"],
       );
     }
 
     const decodedData = decodeURIComponent(init_data);
-    
+
     // Fast hash extraction with manual char checks and integer math
     let hashStart = -1;
     let i = 0;
     const hashStr = "hash=";
     const hashLen = hashStr.length | 0;
-    
+
     // V8 optimization: Use integer math and avoid array access
     while (i < (dataLen - hashLen)) {
-      if (decodedData.charCodeAt(i) === 104 && // 'h'
-          decodedData.charCodeAt(i + 1) === 97 && // 'a'
-          decodedData.charCodeAt(i + 2) === 115 && // 's'
-          decodedData.charCodeAt(i + 3) === 104 && // 'h'
-          decodedData.charCodeAt(i + 4) === 61) { // '='
+      if (
+        decodedData.charCodeAt(i) === 104 && // 'h'
+        decodedData.charCodeAt(i + 1) === 97 && // 'a'
+        decodedData.charCodeAt(i + 2) === 115 && // 's'
+        decodedData.charCodeAt(i + 3) === 104 && // 'h'
+        decodedData.charCodeAt(i + 4) === 61
+      ) { // '='
         hashStart = i;
         break;
       }
@@ -104,7 +112,7 @@ export default function createValidateWebapp(bot_token: string) {
     }
 
     if (hashStart === -1) throw new Error("No hash found in init data");
-    
+
     const hashValueStart = (hashStart + 5) | 0;
     let hashEnd = decodedData.indexOf(AMP, hashValueStart);
     if (hashEnd === -1) hashEnd = dataLen;
@@ -114,7 +122,7 @@ export default function createValidateWebapp(bot_token: string) {
     let partCount = 0;
     let start = 0;
     let end = 0;
-    
+
     // Manual string splitting with integer math
     while (start < dataLen) {
       end = decodedData.indexOf(AMP, start);
@@ -125,7 +133,7 @@ export default function createValidateWebapp(bot_token: string) {
         }
         break;
       }
-      
+
       if (!decodedData.startsWith(HASH + EQUALS, start)) {
         PARTS_BUFFER[partCount] = decodedData.slice(start, end);
         partCount = (partCount + 1) | 0;
@@ -146,18 +154,18 @@ export default function createValidateWebapp(bot_token: string) {
 
     const dataBuffer = encoder.encode(dataCheckString);
     const dataHash = await crypto.subtle.sign("HMAC", secretKey, dataBuffer);
-    
+
     // Ultra-fast hex conversion with manual char codes and integer math
     const view = new Uint8Array(dataHash);
     const viewLen = view.length | 0;
-    
+
     for (let i = 0; i < viewLen; i = (i + 1) | 0) {
       const idx = (i << 1) | 0;
       const hex = HEX_CHARS[view[i]];
       HEX_BUFFER[idx] = hex[0];
       HEX_BUFFER[idx + 1] = hex[1];
     }
-    
+
     const hashHex = HEX_BUFFER.slice(0, viewLen << 1).join("");
 
     if (hashHex !== userHash) {
@@ -169,20 +177,20 @@ export default function createValidateWebapp(bot_token: string) {
       hash: userHash,
       auth_date: 0,
       user: {} as TelegramWebApps.WebAppInitData["user"],
-      query_id: ""
+      query_id: "",
     };
 
     start = 0;
     while (start < dataLen) {
       const end = decodedData.indexOf(AMP, start);
       const eqPos = decodedData.indexOf(EQUALS, start);
-      
+
       if (eqPos > start && (end === -1 || eqPos < end)) {
         const key = decodedData.slice(start, eqPos);
         const value = decodedData.slice(eqPos + 1, end === -1 ? dataLen : end);
-        
+
         // V8 optimization: Use switch for better branch prediction
-        switch(key) {
+        switch (key) {
           case USER:
             metadata.user = parseUser(value);
             break;
@@ -194,7 +202,7 @@ export default function createValidateWebapp(bot_token: string) {
             break;
         }
       }
-      
+
       if (end === -1) break;
       start = (end + 1) | 0;
     }

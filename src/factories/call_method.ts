@@ -7,13 +7,13 @@ export default function buildCallMethod(
 ) {
   const { fetch_fn, base_url } = options;
   return async (method: BotMethod, params?: any) => {
-    const url = new URL(base_url.concat(bot_token, '/', method));
+    const url = new URL(base_url.concat(bot_token, "/", method));
 
     // append params
     for (const key in params) {
       const value = (params as Record<string, unknown>)[key];
-      
-      if (typeof value === 'object' && value !== null) {
+
+      if (typeof value === "object" && value !== null) {
         url.searchParams.set(key, JSON.stringify(value));
       } else {
         url.searchParams.set(key, String(value));

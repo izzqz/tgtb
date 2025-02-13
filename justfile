@@ -1,13 +1,6 @@
 default:
     @just --list
 
-test:
-    cd rs_lib && wasm-pack test --node
-    deno test
-
-wasm-test:
-    cd rs_lib && wasm-pack test --node -- --coverage-provider=v8
-
 # lint and type check
 lint:
     cargo clippy
@@ -20,3 +13,15 @@ fmt:
     cargo fmt --all
     cargo clippy --fix
     deno fmt
+
+# test wasm in different browsers
+[working-directory: 'rs_lib']
+test-wasm:
+    wasm-pack test --chrome --node --firefox --headless
+
+test:
+    deno test 
+
+test-coverage:
+    deno test --coverage
+    deno coverage --include=src

@@ -1,4 +1,4 @@
-import { faker } from "jsr:@jackfiszr/faker@1.1.6";
+import { faker } from "jsr:@jackfiszr/faker";
 
 const BOT_TOKEN_CHARS =
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-".split("");

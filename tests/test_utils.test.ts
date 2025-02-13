@@ -1,4 +1,4 @@
-import { assertEquals, assertMatch } from "jsr:@std/assert@1";
+import { assertEquals, assertMatch } from "jsr:@std/assert";
 import {
   randomBotId,
   randomBotToken,

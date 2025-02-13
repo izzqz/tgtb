@@ -2,7 +2,8 @@
 // deno-lint-ignore-file
 // deno-fmt-ignore-file
 
-export function validate_init_data(
-  init_data: string,
-  bot_token: string,
-): boolean;
+export class Validator {
+  free(): void;
+  constructor(bot_token: string);
+  validate(init_data: string): boolean;
+}

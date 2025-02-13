@@ -1,5 +1,5 @@
 import createValidateWebapp from "../src/factories/validate_webapp.ts";
-import { validate_init_data } from "../lib/tg_validator.js";
+import { Validator } from "../lib/tg_validator.js";
 
 const validBotToken = "7040088495:AAHVy6LQH-RvZzYi7c5-Yv5w046qPUO2NTk";
 const validInitDataString =
@@ -8,6 +8,7 @@ const invalidInitDataString =
   "query_id=invalid&user=%7B%22id%22%3A123%7D&auth_date=1717087395&hash=invalid";
 
 const validateWebapp = createValidateWebapp(validBotToken);
+const validator = new Validator(validBotToken);
 
 // Valid init data comparison
 Deno.bench({
@@ -23,7 +24,7 @@ Deno.bench({
   name: "Rust/WASM",
   group: "valid init data",
   async fn() {
-    await validate_init_data(validInitDataString, validBotToken);
+    validator.validate(validInitDataString);
   },
 });
 
@@ -46,7 +47,7 @@ Deno.bench({
   group: "invalid init data",
   async fn() {
     try {
-      await validate_init_data(invalidInitDataString, validBotToken);
+      validator.validate(invalidInitDataString);
     } catch {
       // Expected error
     }
@@ -72,7 +73,7 @@ Deno.bench({
   group: "empty init data",
   async fn() {
     try {
-      await validate_init_data("", validBotToken);
+      validator.validate("");
     } catch {
       // Expected error
     }
@@ -98,7 +99,7 @@ Deno.bench({
   group: "malformed init data",
   async fn() {
     try {
-      await validate_init_data("not_a_query_string", validBotToken);
+      validator.validate("not_a_query_string");
     } catch {
       // Expected error
     }

@@ -17,73 +17,81 @@ pub enum ValidationError {
 }
 
 #[wasm_bindgen]
-#[inline]
-pub fn validate_init_data(
-  init_data: &str,
-  bot_token: &str,
-) -> Result<bool, JsError> {
-  if init_data.is_empty() {
-    return Err(JsError::new("empty init data"));
+pub struct Validator {
+  secret_key: Vec<u8>,
+}
+
+#[wasm_bindgen]
+impl Validator {
+  #[wasm_bindgen(constructor)]
+  pub fn new(bot_token: &str) -> Result<Validator, JsError> {
+    let mut secret_key = HmacSha256::new_from_slice(bot_token.as_bytes())
+      .map_err(|e| JsError::new(&e.to_string()))?;
+    secret_key.update(black_box(b"WebAppData"));
+    let secret_key = secret_key.finalize().into_bytes().to_vec();
+
+    Ok(Validator { secret_key })
   }
 
-  if !init_data.contains('=') || !init_data.contains("hash=") {
-    return Err(JsError::new("missing hash field"));
-  }
+  #[wasm_bindgen]
+  pub fn validate(&self, init_data: &str) -> Result<bool, JsError> {
+    if init_data.is_empty() {
+      return Err(JsError::new("empty init data"));
+    }
 
-  let mut check_pairs = Vec::with_capacity(8);
-  let mut hash = None;
+    if !init_data.contains('=') || !init_data.contains("hash=") {
+      return Err(JsError::new("missing hash field"));
+    }
 
-  for pair in init_data.split('&') {
-    if let Some((k, v)) = pair.split_once('=') {
-      if k == "hash" {
-        hash = Some(v.to_string());
-        continue;
+    let mut check_pairs = Vec::with_capacity(8);
+    let mut hash = None;
+
+    for pair in init_data.split('&') {
+      if let Some((k, v)) = pair.split_once('=') {
+        if k == "hash" {
+          hash = Some(v.to_string());
+          continue;
+        }
+        check_pairs.push((k.to_string(), v.to_string()));
+      } else {
+        return Err(JsError::new("malformed query pair"));
       }
-      check_pairs.push((k.to_string(), v.to_string()));
-    } else {
-      return Err(JsError::new("malformed query pair"));
     }
-  }
 
-  let hash = match hash {
-    Some(h) => h,
-    None => return Err(JsError::new("missing hash field")),
-  };
+    let hash = match hash {
+      Some(h) => h,
+      None => return Err(JsError::new("missing hash field")),
+    };
 
-  check_pairs.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+    check_pairs.sort_unstable_by(|a, b| a.0.cmp(&b.0));
 
-  let total_len: usize =
-    check_pairs.iter().map(|(k, v)| k.len() + v.len() + 2).sum();
-  let mut data_check_string = String::with_capacity(total_len);
+    let total_len: usize =
+      check_pairs.iter().map(|(k, v)| k.len() + v.len() + 2).sum();
+    let mut data_check_string = String::with_capacity(total_len);
 
-  for (i, (k, v)) in check_pairs.iter().enumerate() {
-    if i > 0 {
-      data_check_string.push('\n');
+    for (i, (k, v)) in check_pairs.iter().enumerate() {
+      if i > 0 {
+        data_check_string.push('\n');
+      }
+      data_check_string.push_str(k);
+      data_check_string.push('=');
+      data_check_string.push_str(v);
     }
-    data_check_string.push_str(k);
-    data_check_string.push('=');
-    data_check_string.push_str(v);
+
+    // Calculate HMAC
+    let mut mac = HmacSha256::new_from_slice(&self.secret_key)
+      .map_err(|e| JsError::new(&e.to_string()))?;
+    mac.update(data_check_string.as_bytes());
+
+    let result = mac.finalize().into_bytes();
+
+    // Use stack allocation for hex encoding
+    let mut calculated_hash = [0u8; 64];
+    hex::encode_to_slice(result, &mut calculated_hash)
+      .map_err(|e| JsError::new(&e.to_string()))?;
+
+    Ok(hash.as_bytes() == &calculated_hash[..hash.len()])
   }
-
-  // Generate secret key
-  let mut secret_key = HmacSha256::new_from_slice(bot_token.as_bytes())
-    .map_err(|e| JsError::new(&e.to_string()))?;
-  secret_key.update(black_box(b"WebAppData"));
-  let secret_key = secret_key.finalize().into_bytes();
-
-  // Calculate HMAC
-  let mut mac = HmacSha256::new_from_slice(&secret_key)
-    .map_err(|e| JsError::new(&e.to_string()))?;
-  mac.update(data_check_string.as_bytes());
-
-  let result = mac.finalize().into_bytes();
-
-  // Use stack allocation for hex encoding
-  let mut calculated_hash = [0u8; 64];
-  hex::encode_to_slice(result, &mut calculated_hash)
-    .map_err(|e| JsError::new(&e.to_string()))?;
-
-  Ok(hash.as_bytes() == &calculated_hash[..hash.len()])
 }
 
 #[cfg(test)]
@@ -96,7 +104,8 @@ mod tests {
     let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     let init_data = "auth_date=1234567890&query_id=AAHdF6IQAAAAAN0XohDhrOrc&user=%7B%22id%22%3A1234567890%2C%22first_name%22%3A%22John%22%2C%22last_name%22%3A%22Doe%22%2C%22username%22%3A%22johndoe%22%2C%22language_code%22%3A%22en%22%7D&hash=c0d3e6c3ca85c0d3c7e6a7b8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7";
 
-    let result = validate_init_data(init_data, bot_token);
+    let validator = Validator::new(bot_token).unwrap();
+    let result = validator.validate(init_data);
     assert!(result.is_ok());
     assert!(!result.unwrap()); // Since we don't have a real hash
   }
@@ -106,7 +115,8 @@ mod tests {
     let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     let init_data = "query_id=AAHdF6IQAAAAAN0XohDhrOrc&user=%7B%22id%22%3A1234567890%7D&auth_date=1234567890&hash=invalid";
 
-    let result = validate_init_data(init_data, bot_token);
+    let validator = Validator::new(bot_token).unwrap();
+    let result = validator.validate(init_data);
     assert!(result.is_ok());
     assert!(!result.unwrap());
   }
@@ -116,14 +126,16 @@ mod tests {
     let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     let init_data = "query_id=AAHdF6IQAAAAAN0XohDhrOrc&user=%7B%22id%22%3A1234567890%7D&auth_date=1234567890";
 
-    let result = validate_init_data(init_data, bot_token);
+    let validator = Validator::new(bot_token).unwrap();
+    let result = validator.validate(init_data);
     assert!(result.is_err());
   }
 
   #[wasm_bindgen_test]
   fn test_empty_init_data() {
     let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
-    let result = validate_init_data("", bot_token);
+    let validator = Validator::new(bot_token).unwrap();
+    let result = validator.validate("");
     assert!(result.is_err());
   }
 
@@ -131,7 +143,8 @@ mod tests {
   fn test_malformed_query_pair() {
     let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     let init_data = "query_id&user=test&hash=abc";
-    let result = validate_init_data(init_data, bot_token);
+    let validator = Validator::new(bot_token).unwrap();
+    let result = validator.validate(init_data);
     assert!(result.is_err());
   }
 
@@ -140,7 +153,8 @@ mod tests {
     let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     let init_data = "queryidtest";
 
-    let result = validate_init_data(init_data, bot_token);
+    let validator = Validator::new(bot_token).unwrap();
+    let result = validator.validate(init_data);
     assert!(result.is_err());
   }
 
@@ -148,7 +162,8 @@ mod tests {
   fn test_wasm_valid() {
     let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     let init_data = "query_id=test&hash=test";
-    let result = validate_init_data(init_data, bot_token);
+    let validator = Validator::new(bot_token).unwrap();
+    let result = validator.validate(init_data);
     assert!(result.is_ok());
   }
 
@@ -156,7 +171,8 @@ mod tests {
   fn test_wasm_error() {
     let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     let init_data = "";
-    let result = validate_init_data(init_data, bot_token);
+    let validator = Validator::new(bot_token).unwrap();
+    let result = validator.validate(init_data);
     assert!(result.is_err());
   }
 }

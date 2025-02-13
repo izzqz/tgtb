@@ -1,9 +1,8 @@
 import { assertEquals, assertRejects } from "jsr:@std/assert@1";
-import { describe, it, beforeEach } from "jsr:@std/testing/bdd";
+import { beforeEach, describe, it } from "jsr:@std/testing/bdd";
 
 import tgtb from "@izzqz/tgtb";
 import type { ApiError } from "@izzqz/tgtb/types";
-
 
 describe("callMethod", () => {
   const BOT_TOKEN = "test_token";
@@ -15,7 +14,9 @@ describe("callMethod", () => {
     // Reset mock for each test
     // deno-lint-ignore require-await
     mockFetch = async (_input: string | URL | Request) => {
-      return new Response(JSON.stringify({ ok: true, result: { test: "success" } }));
+      return new Response(
+        JSON.stringify({ ok: true, result: { test: "success" } }),
+      );
     };
 
     client = tgtb(BOT_TOKEN, {
@@ -25,7 +26,7 @@ describe("callMethod", () => {
 
   it("should construct correct URL with base parameters", async () => {
     let capturedUrl: string | undefined;
-    
+
     mockFetch = async (input: string | URL | Request) => {
       capturedUrl = input.toString();
       return new Response(JSON.stringify({ ok: true, result: {} }));
@@ -36,13 +37,13 @@ describe("callMethod", () => {
 
     assertEquals(
       capturedUrl,
-      `${DEFAULT_BASE_URL}${BOT_TOKEN}/getMe`
+      `${DEFAULT_BASE_URL}${BOT_TOKEN}/getMe`,
     );
   });
 
   it("should handle primitive parameters correctly", async () => {
     let capturedUrl: string | undefined;
-    
+
     mockFetch = async (input: string | URL | Request) => {
       capturedUrl = input.toString();
       return new Response(JSON.stringify({ ok: true, result: {} }));
@@ -65,7 +66,7 @@ describe("callMethod", () => {
       keyboard: [[{ text: "Button 1" }, { text: "Button 2" }]],
       resize_keyboard: true,
     };
-    
+
     mockFetch = async (input: string | URL | Request) => {
       capturedUrl = input.toString();
       return new Response(JSON.stringify({ ok: true, result: {} }));
@@ -81,14 +82,14 @@ describe("callMethod", () => {
     const url = new URL(capturedUrl!);
     assertEquals(
       url.searchParams.get("reply_markup"),
-      JSON.stringify(complexObject)
+      JSON.stringify(complexObject),
     );
   });
 
   it("should use custom base URL when provided", async () => {
     let capturedUrl: string | undefined;
     const customBaseUrl = "https://custom.api.telegram.org/bot";
-    
+
     mockFetch = async (input: string | URL | Request) => {
       capturedUrl = input.toString();
       return new Response(JSON.stringify({ ok: true, result: {} }));
@@ -102,7 +103,7 @@ describe("callMethod", () => {
 
     assertEquals(
       capturedUrl,
-      `${customBaseUrl}${BOT_TOKEN}/getMe`
+      `${customBaseUrl}${BOT_TOKEN}/getMe`,
     );
   });
 
@@ -141,7 +142,7 @@ describe("callMethod", () => {
           ok: false,
           error_code: 404,
           description: "Not Found",
-        } as ApiError)
+        } as ApiError),
       );
     };
 
@@ -159,19 +160,19 @@ describe("callMethod", () => {
     };
 
     client = tgtb(BOT_TOKEN, { fetch_fn: mockFetch });
-    
+
     await assertRejects(
       async () => {
         await client.callMethod("getMe");
       },
       Error,
-      "Network error"
+      "Network error",
     );
   });
 
   it("should handle undefined parameter values", async () => {
     let capturedUrl: string | undefined;
-    
+
     mockFetch = async (input: string | URL | Request) => {
       capturedUrl = input.toString();
       return new Response(JSON.stringify({ ok: true, result: {} }));
@@ -190,7 +191,7 @@ describe("callMethod", () => {
 
   it("should work with no parameters", async () => {
     let capturedUrl: string | undefined;
-    
+
     mockFetch = async (input: string | URL | Request) => {
       capturedUrl = input.toString();
       return new Response(JSON.stringify({ ok: true, result: {} }));
@@ -205,7 +206,7 @@ describe("callMethod", () => {
 
   it("should handle falsy parameter values", async () => {
     let capturedUrl: string | undefined;
-    
+
     mockFetch = async (input: string | URL | Request) => {
       capturedUrl = input.toString();
       return new Response(JSON.stringify({ ok: true, result: {} }));
@@ -224,7 +225,7 @@ describe("callMethod", () => {
 
   it("should handle optional parameters", async () => {
     let capturedUrl: string | undefined;
-    
+
     mockFetch = async (input: string | URL | Request) => {
       capturedUrl = input.toString();
       return new Response(JSON.stringify({ ok: true, result: {} }));
@@ -284,4 +285,3 @@ describe("callMethod", () => {
     assertEquals(response, complexResponse);
   });
 });
-

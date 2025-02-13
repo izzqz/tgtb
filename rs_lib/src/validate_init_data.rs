@@ -4,7 +4,6 @@ use js_sys::{Function, Promise};
 use sha2::Sha256;
 use thiserror::Error;
 use wasm_bindgen::prelude::*;
-use wasm_bindgen_futures::JsFuture;
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -27,18 +26,22 @@ pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
   let secret_key = secret_key.finalize().into_bytes().to_vec();
 
   // Create closure that captures secret_key
-  let validate_fn = Closure::wrap(Box::new(
-    move |init_data: String| -> Promise {
+  let validate_fn =
+    Closure::wrap(Box::new(move |init_data: String| -> Promise {
       let secret_key = secret_key.clone();
-      
+
       let promise = Promise::new(&mut |resolve, reject| {
         if init_data.is_empty() {
-          reject.call1(&JsValue::NULL, &JsValue::from_str("empty init data")).unwrap();
+          reject
+            .call1(&JsValue::NULL, &JsValue::from_str("empty init data"))
+            .unwrap();
           return;
         }
 
         if !init_data.contains('=') || !init_data.contains("hash=") {
-          reject.call1(&JsValue::NULL, &JsValue::from_str("missing hash field")).unwrap();
+          reject
+            .call1(&JsValue::NULL, &JsValue::from_str("missing hash field"))
+            .unwrap();
           return;
         }
 
@@ -53,7 +56,9 @@ pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
             }
             check_pairs.push((k.to_string(), v.to_string()));
           } else {
-            reject.call1(&JsValue::NULL, &JsValue::from_str("malformed query pair")).unwrap();
+            reject
+              .call1(&JsValue::NULL, &JsValue::from_str("malformed query pair"))
+              .unwrap();
             return;
           }
         }
@@ -61,14 +66,17 @@ pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
         let hash = match hash {
           Some(h) => h,
           None => {
-            reject.call1(&JsValue::NULL, &JsValue::from_str("missing hash field")).unwrap();
+            reject
+              .call1(&JsValue::NULL, &JsValue::from_str("missing hash field"))
+              .unwrap();
             return;
           }
         };
 
         check_pairs.sort_unstable_by(|a, b| a.0.cmp(&b.0));
 
-        let total_len: usize = check_pairs.iter().map(|(k, v)| k.len() + v.len() + 2).sum();
+        let total_len: usize =
+          check_pairs.iter().map(|(k, v)| k.len() + v.len() + 2).sum();
         let mut data_check_string = String::with_capacity(total_len);
 
         for (i, (k, v)) in check_pairs.iter().enumerate() {
@@ -84,7 +92,9 @@ pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
         let mut mac = match HmacSha256::new_from_slice(&secret_key) {
           Ok(m) => m,
           Err(e) => {
-            reject.call1(&JsValue::NULL, &JsValue::from_str(&e.to_string())).unwrap();
+            reject
+              .call1(&JsValue::NULL, &JsValue::from_str(&e.to_string()))
+              .unwrap();
             return;
           }
         };
@@ -95,17 +105,20 @@ pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
         // Use stack allocation for hex encoding
         let mut calculated_hash = [0u8; 64];
         if let Err(e) = hex::encode_to_slice(result, &mut calculated_hash) {
-          reject.call1(&JsValue::NULL, &JsValue::from_str(&e.to_string())).unwrap();
+          reject
+            .call1(&JsValue::NULL, &JsValue::from_str(&e.to_string()))
+            .unwrap();
           return;
         }
 
         let is_valid = hash.as_bytes() == &calculated_hash[..hash.len()];
-        resolve.call1(&JsValue::NULL, &JsValue::from_bool(is_valid)).unwrap();
+        resolve
+          .call1(&JsValue::NULL, &JsValue::from_bool(is_valid))
+          .unwrap();
       });
 
       promise
-    },
-  ) as Box<dyn Fn(String) -> Promise>);
+    }) as Box<dyn Fn(String) -> Promise>);
 
   Ok(validate_fn.into_js_value().unchecked_into())
 }
@@ -114,6 +127,7 @@ pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
 mod tests {
   use super::*;
   use wasm_bindgen_test::*;
+  use wasm_bindgen_futures::JsFuture;
 
   #[wasm_bindgen_test]
   async fn test_valid_init_data() {
@@ -121,7 +135,10 @@ mod tests {
     let init_data = "auth_date=1234567890&query_id=AAHdF6IQAAAAAN0XohDhrOrc&user=%7B%22id%22%3A1234567890%2C%22first_name%22%3A%22John%22%2C%22last_name%22%3A%22Doe%22%2C%22username%22%3A%22johndoe%22%2C%22language_code%22%3A%22en%22%7D&hash=c0d3e6c3ca85c0d3c7e6a7b8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7";
 
     let validate = create_validator(bot_token).unwrap();
-    let promise: Promise = validate.call1(&JsValue::NULL, &JsValue::from_str(init_data)).unwrap().unchecked_into();
+    let promise: Promise = validate
+      .call1(&JsValue::NULL, &JsValue::from_str(init_data))
+      .unwrap()
+      .unchecked_into();
     let result = JsFuture::from(promise).await;
     assert!(result.is_ok());
     assert!(!result.unwrap().as_bool().unwrap()); // Since we don't have a real hash
@@ -133,7 +150,10 @@ mod tests {
     let init_data = "query_id=AAHdF6IQAAAAAN0XohDhrOrc&user=%7B%22id%22%3A1234567890%7D&auth_date=1234567890&hash=invalid";
 
     let validate = create_validator(bot_token).unwrap();
-    let promise: Promise = validate.call1(&JsValue::NULL, &JsValue::from_str(init_data)).unwrap().unchecked_into();
+    let promise: Promise = validate
+      .call1(&JsValue::NULL, &JsValue::from_str(init_data))
+      .unwrap()
+      .unchecked_into();
     let result = JsFuture::from(promise).await;
     assert!(result.is_ok());
     assert!(!result.unwrap().as_bool().unwrap());
@@ -145,7 +165,10 @@ mod tests {
     let init_data = "query_id=AAHdF6IQAAAAAN0XohDhrOrc&user=%7B%22id%22%3A1234567890%7D&auth_date=1234567890";
 
     let validate = create_validator(bot_token).unwrap();
-    let promise: Promise = validate.call1(&JsValue::NULL, &JsValue::from_str(init_data)).unwrap().unchecked_into();
+    let promise: Promise = validate
+      .call1(&JsValue::NULL, &JsValue::from_str(init_data))
+      .unwrap()
+      .unchecked_into();
     let result = JsFuture::from(promise).await;
     assert!(result.is_err());
   }
@@ -154,7 +177,10 @@ mod tests {
   async fn test_empty_init_data() {
     let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     let validate = create_validator(bot_token).unwrap();
-    let promise: Promise = validate.call1(&JsValue::NULL, &JsValue::from_str("")).unwrap().unchecked_into();
+    let promise: Promise = validate
+      .call1(&JsValue::NULL, &JsValue::from_str(""))
+      .unwrap()
+      .unchecked_into();
     let result = JsFuture::from(promise).await;
     assert!(result.is_err());
   }
@@ -164,7 +190,10 @@ mod tests {
     let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     let init_data = "query_id&user=test&hash=abc";
     let validate = create_validator(bot_token).unwrap();
-    let promise: Promise = validate.call1(&JsValue::NULL, &JsValue::from_str(init_data)).unwrap().unchecked_into();
+    let promise: Promise = validate
+      .call1(&JsValue::NULL, &JsValue::from_str(init_data))
+      .unwrap()
+      .unchecked_into();
     let result = JsFuture::from(promise).await;
     assert!(result.is_err());
   }
@@ -175,7 +204,10 @@ mod tests {
     let init_data = "queryidtest";
 
     let validate = create_validator(bot_token).unwrap();
-    let promise: Promise = validate.call1(&JsValue::NULL, &JsValue::from_str(init_data)).unwrap().unchecked_into();
+    let promise: Promise = validate
+      .call1(&JsValue::NULL, &JsValue::from_str(init_data))
+      .unwrap()
+      .unchecked_into();
     let result = JsFuture::from(promise).await;
     assert!(result.is_err());
   }
@@ -185,7 +217,10 @@ mod tests {
     let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     let init_data = "query_id=test&hash=test";
     let validate = create_validator(bot_token).unwrap();
-    let promise: Promise = validate.call1(&JsValue::NULL, &JsValue::from_str(init_data)).unwrap().unchecked_into();
+    let promise: Promise = validate
+      .call1(&JsValue::NULL, &JsValue::from_str(init_data))
+      .unwrap()
+      .unchecked_into();
     let result = JsFuture::from(promise).await;
     assert!(result.is_ok());
   }
@@ -195,7 +230,10 @@ mod tests {
     let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     let init_data = "";
     let validate = create_validator(bot_token).unwrap();
-    let promise: Promise = validate.call1(&JsValue::NULL, &JsValue::from_str(init_data)).unwrap().unchecked_into();
+    let promise: Promise = validate
+      .call1(&JsValue::NULL, &JsValue::from_str(init_data))
+      .unwrap()
+      .unchecked_into();
     let result = JsFuture::from(promise).await;
     assert!(result.is_err());
   }

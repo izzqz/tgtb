@@ -6,7 +6,7 @@ export default function createValidateWebapp(bot_token: string) {
   return async (init_data: string): Promise<boolean> => {
     try {
       const result = await validator(init_data);
-      return result === true;
+      return Boolean(result);
     } catch (error) {
       throw error instanceof Error ? error : new Error(String(error));
     }

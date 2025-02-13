@@ -12,7 +12,7 @@ export interface TgtbClient<F = unknown> {
     method: M,
     params?: Opts<F>[M]
   ) => Promise<ApiResponse<ReturnType<ApiMethods<F>[M]>>>;
-  isInitDataValid: (init_data: string) => Promise<boolean>;
+  isInitDataValid: (init_data: string) => boolean;
 }
 
 export interface TgtbOptions {

@@ -3,6 +3,7 @@ use js_sys::{Function, Error as JsError};
 use sha2::Sha256;
 use thiserror::Error;
 use wasm_bindgen::prelude::*;
+use percent_encoding::percent_decode_str;
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -16,58 +17,84 @@ pub enum ValidationError {
   ParseError(String),
 }
 
+const WEBAPPDATA: &[u8] = b"WebAppData";
+const CAPACITY: usize = 32; // Reasonable default for query params
+
+/// Extracts the hash from init data string
+fn extract_hash(init_data: &str) -> Result<(String, String), JsError> {
+    let (base_data, hash) = if let Some(pos) = init_data.find("&hash=") {
+        let (base, hash_part) = init_data.split_at(pos);
+        let hash = &hash_part[6..]; // Skip "&hash="
+        (base.to_string(), hash.to_string())
+    } else {
+        return Err(JsError::new("missing hash field"));
+    };
+
+    Ok((base_data, hash))
+}
+
 #[wasm_bindgen]
 pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
-  // First create HMAC with WebAppData as key and bot token as data
-  let mut secret = HmacSha256::new_from_slice(b"WebAppData")
+  // Pre-compute the secret key once
+  let mut secret = HmacSha256::new_from_slice(WEBAPPDATA)
     .map_err(|e| JsError::new(&e.to_string()))?;
   secret.update(bot_token.as_bytes());
-  // Get the secret key from the first HMAC's digest
-  let secret_key = secret.finalize().into_bytes().to_vec();
-  let bot_token = bot_token.to_string();
-
+  let secret_key = secret.finalize().into_bytes();
+  
   // Create closure that returns bool directly and throws JsError
   let validate_fn = Closure::wrap(Box::new(move |init_data: String| -> bool {
-    let secret_key = secret_key.clone();
-
     if init_data.is_empty() {
       wasm_bindgen::throw_val(JsValue::from(JsError::new("empty init data")));
     }
 
-    // Decode URI components
-    let decoded = match js_sys::decode_uri_component(&init_data) {
-      Ok(val) => val.as_string().unwrap_or_else(|| init_data.clone()),
-      Err(_) => init_data.clone(),
+    // Extract hash first
+    let (base_data, hash) = match extract_hash(&init_data) {
+      Ok(result) => result,
+      Err(e) => {
+        wasm_bindgen::throw_val(JsValue::from(e));
+      }
     };
 
-    // Split into array and find hash
-    let mut arr: Vec<String> = decoded.split('&').map(String::from).collect();
+    // Pre-allocate vector with estimated capacity
+    let mut arr = Vec::with_capacity(CAPACITY);
     
-    // Check for hash field first
-    if !arr.iter().any(|s| s.starts_with("hash=")) {
-      wasm_bindgen::throw_val(JsValue::from(JsError::new("missing hash field")));
+    // Process base data and validate query pairs
+    for pair in base_data.split('&') {
+      if !pair.contains('=') {
+        wasm_bindgen::throw_val(JsValue::from(JsError::new("malformed query pair")));
+      }
+
+      // URL decode the pair
+      let decoded_pair = match percent_decode_str(pair).decode_utf8() {
+        Ok(decoded) => decoded.to_string(),
+        Err(_) => pair.to_string(),
+      };
+
+      arr.push(decoded_pair);
     }
 
-    // Then validate all pairs have = sign
-    if arr.iter().any(|s| !s.contains('=')) {
-      wasm_bindgen::throw_val(JsValue::from(JsError::new("malformed query pair")));
+    // Validate hash format after query validation
+    if !hash.chars().all(|c| c.is_ascii_hexdigit()) || hash.len() != 64 {
+      wasm_bindgen::throw_val(JsValue::from(JsError::new("hash mismatch")));
     }
 
-    let hash = match arr.iter().position(|s| s.starts_with("hash=")) {
-      Some(idx) => {
-        let hash_pair = arr.remove(idx);
-        hash_pair.split('=').nth(1).unwrap_or("").to_string()
-      }
-      None => {
-        wasm_bindgen::throw_val(JsValue::from(JsError::new("missing hash field")));
-      }
-    };
+    // Sort array in-place using faster ascii comparison
+    arr.sort_unstable_by(|a, b| {
+      a.bytes()
+        .map(|b| b.to_ascii_lowercase())
+        .cmp(b.bytes().map(|b| b.to_ascii_lowercase()))
+    });
 
-    // Sort array alphabetically
-    arr.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
-
-    // Join with newlines
-    let data_check_string = arr.join("\n");
+    // Join with newlines - pre-calculate capacity
+    let total_len = arr.iter().map(|s| s.len()).sum::<usize>() + arr.len() - 1;
+    let mut data_check_string = String::with_capacity(total_len);
+    
+    for (i, s) in arr.iter().enumerate() {
+      if i > 0 {
+        data_check_string.push('\n');
+      }
+      data_check_string.push_str(s);
+    }
 
     // Calculate HMAC using the digest from the first HMAC as the key
     let mut mac = match HmacSha256::new_from_slice(&secret_key) {

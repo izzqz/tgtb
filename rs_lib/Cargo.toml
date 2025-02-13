@@ -14,6 +14,7 @@ hmac = "0.12.1"
 sha2 = "0.10.8"
 thiserror = "1.0.57"
 web-sys = { version = "0.3.68", features = ["console"] }
+percent-encoding = "2.3.1"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.41"

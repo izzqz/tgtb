@@ -6,6 +6,7 @@
     "jsr:@std/collections@*": "1.0.9",
     "jsr:@std/internal@^1.0.5": "1.0.5",
     "jsr:@std/testing@*": "1.0.9",
+    "npm:@types/node@*": "22.5.4",
     "npm:telegram-bot-api-types@*": "8.1.0"
   },
   "jsr": {
@@ -30,8 +31,17 @@
     }
   },
   "npm": {
+    "@types/node@22.5.4": {
+      "integrity": "sha512-FDuKUJQm/ju9fT/SeX/6+gBzoPzlVCzfzmGkwKvRHQVxi4BntVbyIwf6a4Xn62mrvndLiml6z/UBXIdEVjQLXg==",
+      "dependencies": [
+        "undici-types"
+      ]
+    },
     "telegram-bot-api-types@8.1.0": {
       "integrity": "sha512-CaPLzYORotm7mbd8c6UKHxOcEwvgrL8MDgyRx5rC7IrYYRd1zmy8+8jsPcP8P0v3X7rAmp5ew7obNlqSBM5dKw=="
+    },
+    "undici-types@6.19.8": {
+      "integrity": "sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw=="
     }
   },
   "remote": {

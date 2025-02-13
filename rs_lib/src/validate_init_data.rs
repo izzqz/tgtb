@@ -3,7 +3,6 @@ use js_sys::{Function, Error as JsError};
 use sha2::Sha256;
 use thiserror::Error;
 use wasm_bindgen::prelude::*;
-use web_sys::console;
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -27,12 +26,12 @@ pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
   let secret_key = secret.finalize().into_bytes().to_vec();
   let bot_token = bot_token.to_string();
 
-  // Create closure that returns bool directly
-  let validate_fn = Closure::wrap(Box::new(move |init_data: String| -> Result<bool, JsError> {
+  // Create closure that returns bool directly and throws JsError
+  let validate_fn = Closure::wrap(Box::new(move |init_data: String| -> bool {
     let secret_key = secret_key.clone();
 
     if init_data.is_empty() {
-      return Err(JsError::new("empty init data"));
+      wasm_bindgen::throw_val(JsValue::from(JsError::new("empty init data")));
     }
 
     // Decode URI components
@@ -46,12 +45,12 @@ pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
     
     // Check for hash field first
     if !arr.iter().any(|s| s.starts_with("hash=")) {
-      return Err(JsError::new("missing hash field"));
+      wasm_bindgen::throw_val(JsValue::from(JsError::new("missing hash field")));
     }
 
     // Then validate all pairs have = sign
     if arr.iter().any(|s| !s.contains('=')) {
-      return Err(JsError::new("malformed query pair"));
+      wasm_bindgen::throw_val(JsValue::from(JsError::new("malformed query pair")));
     }
 
     let hash = match arr.iter().position(|s| s.starts_with("hash=")) {
@@ -60,7 +59,7 @@ pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
         hash_pair.split('=').nth(1).unwrap_or("").to_string()
       }
       None => {
-        return Err(JsError::new("missing hash field"));
+        wasm_bindgen::throw_val(JsValue::from(JsError::new("missing hash field")));
       }
     };
 
@@ -70,18 +69,11 @@ pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
     // Join with newlines
     let data_check_string = arr.join("\n");
 
-    console::log_1(&JsValue::from_str(&format!(
-      "Bot token length: {}\nSecret key (hex): {}\nData check string:\n{}",
-      bot_token.len(),
-      hex::encode(&secret_key),
-      data_check_string
-    )));
-
     // Calculate HMAC using the digest from the first HMAC as the key
     let mut mac = match HmacSha256::new_from_slice(&secret_key) {
       Ok(m) => m,
       Err(e) => {
-        return Err(JsError::new(&e.to_string()));
+        wasm_bindgen::throw_val(JsValue::from(JsError::new(&e.to_string())));
       }
     };
 
@@ -91,19 +83,18 @@ pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
     // Use stack allocation for hex encoding
     let mut calculated_hash = [0u8; 64];
     if let Err(e) = hex::encode_to_slice(result, &mut calculated_hash) {
-      return Err(JsError::new(&e.to_string()));
+      wasm_bindgen::throw_val(JsValue::from(JsError::new(&e.to_string())));
     }
 
     let calculated_hash_str = std::str::from_utf8(&calculated_hash[..hash.len()]).unwrap_or("invalid utf8");
 
-    console::log_1(&JsValue::from_str(&format!(
-      "Calculated hash: {}\nExpected hash: {}",
-      calculated_hash_str,
-      hash
-    )));
+    let is_valid = calculated_hash_str == hash;
+    if !is_valid {
+      wasm_bindgen::throw_val(JsValue::from(JsError::new("hash mismatch")));
+    }
 
-    Ok(calculated_hash_str == hash)
-  }) as Box<dyn Fn(String) -> Result<bool, JsError>>);
+    true
+  }) as Box<dyn Fn(String) -> bool>);
 
   Ok(validate_fn.into_js_value().unchecked_into())
 }
@@ -131,10 +122,8 @@ mod tests {
     let init_data = "auth_date=1234567890&query_id=AAHdF6IQAAAAAN0XohDhrOrc&user=%7B%22id%22%3A1234567890%2C%22first_name%22%3A%22John%22%2C%22last_name%22%3A%22Doe%22%2C%22username%22%3A%22johndoe%22%2C%22language_code%22%3A%22en%22%7D&hash=c0d3e6c3ca85c0d3c7e6a7b8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7";
 
     let validate = create_validator(bot_token).unwrap();
-    let result = validate
-      .call1(&JsValue::NULL, &JsValue::from_str(init_data))
-      .unwrap();
-    assert!(!result.as_bool().unwrap()); // Since we don't have a real hash
+    let result = validate.call1(&JsValue::NULL, &JsValue::from_str(init_data));
+    assert!(result.is_err());
   }
 
   #[wasm_bindgen_test]
@@ -143,10 +132,8 @@ mod tests {
     let init_data = "query_id=AAHdF6IQAAAAAN0XohDhrOrc&user=%7B%22id%22%3A1234567890%7D&auth_date=1234567890&hash=invalid";
 
     let validate = create_validator(bot_token).unwrap();
-    let result = validate
-      .call1(&JsValue::NULL, &JsValue::from_str(init_data))
-      .unwrap();
-    assert!(!result.as_bool().unwrap());
+    let result = validate.call1(&JsValue::NULL, &JsValue::from_str(init_data));
+    assert!(result.is_err());
   }
 
   #[wasm_bindgen_test]
@@ -184,15 +171,6 @@ mod tests {
     let validate = create_validator(bot_token).unwrap();
     let result = validate.call1(&JsValue::NULL, &JsValue::from_str(init_data));
     assert!(result.is_err());
-  }
-
-  #[wasm_bindgen_test]
-  fn test_wasm_valid() {
-    let bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
-    let init_data = "query_id=test&hash=test";
-    let validate = create_validator(bot_token).unwrap();
-    let result = validate.call1(&JsValue::NULL, &JsValue::from_str(init_data));
-    assert!(result.is_ok());
   }
 
   #[wasm_bindgen_test]

@@ -152,6 +152,7 @@ pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
 }
 
 #[cfg(test)]
+#[allow(dead_code)]
 mod tests {
   use super::*;
   use wasm_bindgen_test::*;

@@ -1,4 +1,4 @@
-import { assertEquals, assertMatch } from "jsr:@std/assert";
+import { assertEquals, assertMatch } from "jsr:@std/assert@1";
 import { randomBotToken, randomBotId, randomBotUsername } from "@izzqz/tgtb/test";
 
 Deno.test("randomBotToken", async (t) => {

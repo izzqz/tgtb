@@ -24,7 +24,7 @@ Deno.bench({
   name: "Rust/WASM",
   group: "valid init data",
   async fn() {
-    validateWasm(validInitDataString);
+    await validateWasm(validInitDataString);
   },
 });
 
@@ -47,7 +47,7 @@ Deno.bench({
   group: "invalid init data",
   async fn() {
     try {
-      validateWasm(invalidInitDataString);
+      await validateWasm(invalidInitDataString);
     } catch {
       // Expected error
     }
@@ -73,7 +73,7 @@ Deno.bench({
   group: "empty init data",
   async fn() {
     try {
-      validateWasm("");
+      await validateWasm("");
     } catch {
       // Expected error
     }
@@ -99,7 +99,7 @@ Deno.bench({
   group: "malformed init data",
   async fn() {
     try {
-      validateWasm("not_a_query_string");
+      await validateWasm("not_a_query_string");
     } catch {
       // Expected error
     }

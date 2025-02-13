@@ -1,5 +1,5 @@
 import { assertEquals, assertMatch } from "jsr:@std/assert";
-import { randomBotToken, randomBotId, randomBotUsername } from "../src/test-utils/index.ts";
+import { randomBotToken, randomBotId, randomBotUsername } from "@izzqz/tgtb/test";
 
 Deno.test("randomBotToken", async (t) => {
   await t.step("should generate valid bot token", () => {

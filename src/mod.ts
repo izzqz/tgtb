@@ -23,5 +23,3 @@ export default function tgtb(bot_token: string, options?: TgtbOptions): TgtbClie
     isInitDataValid: createValidateWebapp(bot_token),
   };
 }
-
-export * as types from "./types/telegram.ts";

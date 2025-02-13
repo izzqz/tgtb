@@ -1,5 +1,5 @@
 import { assertEquals, assertThrows } from "jsr:@std/assert";
-import tgtb from "../src/mod.ts";
+import tgtb from "@izzqz/tgtb";
 
 const BOT_TOKEN = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
 const VALID_BOT_TOKEN = "7040088495:AAHVy6LQH-RvZzYi7c5-Yv5w046qPUO2NTk";

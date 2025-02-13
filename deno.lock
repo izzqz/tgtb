@@ -1,6 +1,7 @@
 {
   "version": "4",
   "specifiers": {
+    "jsr:@jackfiszr/faker@1.1.6": "1.1.6",
     "jsr:@std/assert@*": "1.0.11",
     "jsr:@std/assert@^1.0.10": "1.0.11",
     "jsr:@std/collections@*": "1.0.9",
@@ -10,6 +11,9 @@
     "npm:telegram-bot-api-types@*": "8.1.0"
   },
   "jsr": {
+    "@jackfiszr/faker@1.1.6": {
+      "integrity": "0d04ca2a13889243670c17ef30d318208c918a7c6a5afbdb6e0958d4cd71e98b"
+    },
     "@std/assert@1.0.11": {
       "integrity": "2461ef3c368fe88bc60e186e7744a93112f16fd110022e113a0849e94d1c83c1",
       "dependencies": [

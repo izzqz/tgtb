@@ -1,7 +1,8 @@
 {
   "name": "@izzqz/tgtb",
   "exports": {
-    ".": "./src/mod.ts"
+    ".": "./src/mod.ts",
+    "./test": "./src/test-utils/index.ts"
   },
   "tasks": {
     "dev": "deno run --watch main.ts",

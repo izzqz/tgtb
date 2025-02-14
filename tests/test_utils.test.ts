@@ -405,37 +405,37 @@ Deno.test("randomInitData", async (t) => {
   });
 
   await t.step("should handle special characters in user data", async () => {
-    using alphaNumericStub = stub(
+    using _alphaNumericStub = stub(
       faker.random,
       "alphaNumeric",
       returnsNext(["ABC123"]),
     );
-    using numberStub = stub(
+    using _numberStub = stub(
       faker.random,
       "number",
       returnsNext([123456789]),
     );
-    using firstNameStub = stub(
+    using _firstNameStub = stub(
       faker.name,
       "firstName",
       returnsNext(["John & Jane"]),
     );
-    using lastNameStub = stub(
+    using _lastNameStub = stub(
       faker.name,
       "lastName",
       returnsNext(["O'Doe=Smith"]),
     );
-    using userNameStub = stub(
+    using _userNameStub = stub(
       faker.internet,
       "userName",
       returnsNext(["john.doe+test"]),
     );
-    using arrayElementStub = stub(
+    using _arrayElementStub = stub(
       faker.random,
       "arrayElement",
       returnsNext(["en"]),
     );
-    using booleanStub = stub(
+    using _booleanStub = stub(
       faker.random,
       "boolean",
       returnsNext([true]),

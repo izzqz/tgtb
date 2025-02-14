@@ -1,16 +1,20 @@
-import { assertEquals, assertMatch } from "jsr:@std/assert";
-import {
-  randomBotId,
-  randomBotToken,
-  randomBotUsername,
-} from "@izzqz/tgtb/test";
-import { faker } from "jsr:@jackfiszr/faker@1.1.6";
+import { assertEquals, assertMatch, assertNotEquals } from "jsr:@std/assert";
+
+import { faker } from "jsr:@jackfiszr/faker";
 import {
   assertSpyCall,
   assertSpyCalls,
   returnsNext,
   stub,
 } from "jsr:@std/testing/mock";
+
+import {
+  randomBotId,
+  randomBotToken,
+  randomBotUsername,
+  randomInitData,
+} from "@izzqz/tgtb/test";
+import tgtb from "@izzqz/tgtb";
 
 Deno.test("randomBotToken", async (t) => {
   await t.step("should generate valid bot token", () => {
@@ -223,5 +227,48 @@ Deno.test("randomBotUsername", async (t) => {
       args: [],
       returned: true,
     });
+  });
+});
+
+Deno.test("randomInitData", async (t) => {
+  await t.step("should generate valid init data", async () => {
+    const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+    const initData = await randomInitData(botToken);
+
+    // Check format
+    assertMatch(initData, /^auth_date=\d+&query_id=AAF[a-zA-Z0-9]+&user=/);
+    assertMatch(initData, /&hash=[a-f0-9]{64}$/);
+
+    // Check if it can be parsed
+    const params = new URLSearchParams(initData);
+    assertEquals(params.has("auth_date"), true);
+    assertEquals(params.has("query_id"), true);
+    assertEquals(params.has("user"), true);
+    assertEquals(params.has("hash"), true);
+
+    // Parse user data
+    const user = JSON.parse(params.get("user")!);
+    assertEquals(typeof user.id, "number");
+    assertEquals(typeof user.first_name, "string");
+    assertEquals(typeof user.last_name, "string");
+    assertEquals(typeof user.username, "string");
+    assertEquals(typeof user.language_code, "string");
+    assertEquals(typeof user.is_premium, "boolean");
+  });
+
+  await t.step("should generate unique data each time", async () => {
+    const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+    const initData1 = await randomInitData(botToken);
+    const initData2 = await randomInitData(botToken);
+
+    assertNotEquals(initData1, initData2);
+  });
+
+  await t.step("should generate verifiable data", async () => {
+    const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+    const initData = await randomInitData(botToken);
+
+    // This should not throw if the data is valid
+    tgtb(botToken).isInitDataValid(initData);
   });
 });

@@ -2,7 +2,6 @@
   "version": "4",
   "specifiers": {
     "jsr:@jackfiszr/faker@*": "1.1.6",
-    "jsr:@jackfiszr/faker@1.1.6": "1.1.6",
     "jsr:@std/assert@*": "1.0.11",
     "jsr:@std/assert@^1.0.10": "1.0.11",
     "jsr:@std/collections@*": "1.0.10",

@@ -2,11 +2,13 @@ import { faker } from "jsr:@jackfiszr/faker";
 
 export function randomBotToken(bot_id?: number): string {
   const BOT_TOKEN_CHARS =
-  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-".split("");
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-".split(
+      "",
+    );
 
   const botId = bot_id ?? randomBotId();
   const botHash = Array.from(
-    { length: 35 }, 
+    { length: 35 },
     () => faker.random.arrayElement(BOT_TOKEN_CHARS),
   ).join("");
 
@@ -45,7 +47,10 @@ export function randomBotUsername(): string {
   }
 }
 
-async function hmacSha256(key: ArrayBuffer, data: ArrayBuffer): Promise<ArrayBuffer> {
+async function hmacSha256(
+  key: ArrayBuffer,
+  data: ArrayBuffer,
+): Promise<ArrayBuffer> {
   const cryptoKey = await crypto.subtle.importKey(
     "raw",
     key,
@@ -111,5 +116,9 @@ export async function randomInitData(bot_token: string): Promise<string> {
   };
   const authDate = Math.floor(Date.now() / 1000);
 
-  return await signInitData(bot_token, { user, query_id: queryId, auth_date: authDate });
+  return await signInitData(bot_token, {
+    user,
+    query_id: queryId,
+    auth_date: authDate,
+  });
 }

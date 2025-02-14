@@ -1,4 +1,9 @@
-import { assert, assertEquals, assertMatch, assertNotEquals } from "jsr:@std/assert";
+import {
+  assert,
+  assertEquals,
+  assertMatch,
+  assertNotEquals,
+} from "jsr:@std/assert";
 
 import { faker } from "jsr:@jackfiszr/faker";
 import {
@@ -232,105 +237,111 @@ Deno.test("randomBotUsername", async (t) => {
 });
 
 Deno.test("randomInitData", async (t) => {
-  await t.step("should generate valid init data with stubbed values", async () => {
-    const now = 1234567890;
-    globalThis.Date.now = () => now * 1000;
+  await t.step(
+    "should generate valid init data with stubbed values",
+    async () => {
+      const now = 1234567890;
+      globalThis.Date.now = () => now * 1000;
 
-    using alphaNumericStub = stub(
-      faker.random,
-      "alphaNumeric",
-      returnsNext(["ABC123XYZ"]),
-    );
-    using numberStub = stub(
-      faker.random,
-      "number",
-      returnsNext([123456789]),
-    );
-    using firstNameStub = stub(
-      faker.name,
-      "firstName",
-      returnsNext(["John"]),
-    );
-    using lastNameStub = stub(
-      faker.name,
-      "lastName",
-      returnsNext(["Doe"]),
-    );
-    using userNameStub = stub(
-      faker.internet,
-      "userName",
-      returnsNext(["johndoe"]),
-    );
-    using arrayElementStub = stub(
-      faker.random,
-      "arrayElement",
-      returnsNext(["en"]),
-    );
-    using booleanStub = stub(
-      faker.random,
-      "boolean",
-      returnsNext([true]),
-    );
+      using alphaNumericStub = stub(
+        faker.random,
+        "alphaNumeric",
+        returnsNext(["ABC123XYZ"]),
+      );
+      using numberStub = stub(
+        faker.random,
+        "number",
+        returnsNext([123456789]),
+      );
+      using firstNameStub = stub(
+        faker.name,
+        "firstName",
+        returnsNext(["John"]),
+      );
+      using lastNameStub = stub(
+        faker.name,
+        "lastName",
+        returnsNext(["Doe"]),
+      );
+      using userNameStub = stub(
+        faker.internet,
+        "userName",
+        returnsNext(["johndoe"]),
+      );
+      using arrayElementStub = stub(
+        faker.random,
+        "arrayElement",
+        returnsNext(["en"]),
+      );
+      using booleanStub = stub(
+        faker.random,
+        "boolean",
+        returnsNext([true]),
+      );
 
-    const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
-    const initData = await randomInitData(botToken);
+      const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+      const initData = await randomInitData(botToken);
 
-    // Verify all faker calls
-    assertSpyCall(alphaNumericStub, 0, {
-      args: [20],
-      returned: "ABC123XYZ",
-    });
-    assertSpyCall(numberStub, 0, {
-      args: [{ min: 10000000, max: 999999999 }],
-      returned: 123456789,
-    });
-    assertSpyCall(firstNameStub, 0, {
-      args: [],
-      returned: "John",
-    });
-    assertSpyCall(lastNameStub, 0, {
-      args: [],
-      returned: "Doe",
-    });
-    assertSpyCall(userNameStub, 0, {
-      args: [],
-      returned: "johndoe",
-    });
-    assertSpyCall(arrayElementStub, 0, {
-      args: [["en", "ru", "es", "de"]],
-      returned: "en",
-    });
-    assertSpyCall(booleanStub, 0, {
-      args: [],
-      returned: true,
-    });
+      // Verify all faker calls
+      assertSpyCall(alphaNumericStub, 0, {
+        args: [20],
+        returned: "ABC123XYZ",
+      });
+      assertSpyCall(numberStub, 0, {
+        args: [{ min: 10000000, max: 999999999 }],
+        returned: 123456789,
+      });
+      assertSpyCall(firstNameStub, 0, {
+        args: [],
+        returned: "John",
+      });
+      assertSpyCall(lastNameStub, 0, {
+        args: [],
+        returned: "Doe",
+      });
+      assertSpyCall(userNameStub, 0, {
+        args: [],
+        returned: "johndoe",
+      });
+      assertSpyCall(arrayElementStub, 0, {
+        args: [["en", "ru", "es", "de"]],
+        returned: "en",
+      });
+      assertSpyCall(booleanStub, 0, {
+        args: [],
+        returned: true,
+      });
 
-    // Verify the generated init data structure
-    const params = new URLSearchParams(initData);
-    
-    // Verify auth_date
-    assertEquals(params.get("auth_date"), "1234567890");
-    
-    // Verify query_id
-    assertEquals(params.get("query_id"), "AAFABC123XYZ");
-    
-    // Verify user object
-    const user = JSON.parse(params.get("user")!);
-    assertEquals(user, {
-      id: 123456789,
-      first_name: "John",
-      last_name: "Doe",
-      username: "johndoe",
-      language_code: "en",
-      is_premium: true,
-    });
+      // Verify the generated init data structure
+      const params = new URLSearchParams(initData);
 
-    // Verify hash is correct (64 hex chars)
-    const hash = params.get("hash")!;
-    assertMatch(hash, /^[a-f0-9]{64}$/);
+      // Verify auth_date
+      assertEquals(params.get("auth_date"), "1234567890");
 
-    assert(tgtb(botToken).isInitDataValid(initData), "Init data should be valid");
-  });
+      // Verify query_id
+      assertEquals(params.get("query_id"), "AAFABC123XYZ");
+
+      // Verify user object
+      const user = JSON.parse(params.get("user")!);
+      assertEquals(user, {
+        id: 123456789,
+        first_name: "John",
+        last_name: "Doe",
+        username: "johndoe",
+        language_code: "en",
+        is_premium: true,
+      });
+
+      // Verify hash is correct (64 hex chars)
+      const hash = params.get("hash")!;
+      assertMatch(hash, /^[a-f0-9]{64}$/);
+
+      assert(
+        tgtb(botToken).isInitDataValid(initData),
+        "Init data should be valid",
+      );
+    },
+  );
 
   await t.step("should generate unique data each time", async () => {
     using alphaNumericStub = stub(
@@ -383,8 +394,14 @@ Deno.test("randomInitData", async (t) => {
     assertSpyCalls(userNameStub, 2);
     assertSpyCalls(arrayElementStub, 2);
     assertSpyCalls(booleanStub, 2);
-    assert(tgtb(botToken).isInitDataValid(initData1), "Init data should be valid");
-    assert(tgtb(botToken).isInitDataValid(initData2), "Init data should be valid");
+    assert(
+      tgtb(botToken).isInitDataValid(initData1),
+      "Init data should be valid",
+    );
+    assert(
+      tgtb(botToken).isInitDataValid(initData2),
+      "Init data should be valid",
+    );
   });
 
   await t.step("should handle special characters in user data", async () => {
@@ -427,7 +444,10 @@ Deno.test("randomInitData", async (t) => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const initData = await randomInitData(botToken);
 
-    assert(tgtb(botToken).isInitDataValid(initData), "Init data should be valid");
+    assert(
+      tgtb(botToken).isInitDataValid(initData),
+      "Init data should be valid",
+    );
 
     const params = new URLSearchParams(initData);
     const user = JSON.parse(params.get("user")!);
@@ -457,13 +477,13 @@ Deno.test("signInitData", async (t) => {
 
     // Verify the generated init data structure
     const urlParams = new URLSearchParams(initData);
-    
+
     // Verify auth_date
     assertEquals(urlParams.get("auth_date"), "1234567890");
-    
+
     // Verify query_id
     assertEquals(urlParams.get("query_id"), "AAFABC123XYZ");
-    
+
     // Verify user object
     const user = JSON.parse(urlParams.get("user")!);
     assertEquals(user, params.user);
@@ -473,7 +493,10 @@ Deno.test("signInitData", async (t) => {
     assertMatch(hash, /^[a-f0-9]{64}$/);
 
     // Verify the data is valid
-    assert(tgtb(botToken).isInitDataValid(initData), "Init data should be valid");
+    assert(
+      tgtb(botToken).isInitDataValid(initData),
+      "Init data should be valid",
+    );
   });
 
   await t.step("should handle special characters in user data", async () => {
@@ -494,7 +517,10 @@ Deno.test("signInitData", async (t) => {
     const initData = await signInitData(botToken, params);
 
     // Verify the data is valid
-    assert(tgtb(botToken).isInitDataValid(initData), "Init data should be valid");
+    assert(
+      tgtb(botToken).isInitDataValid(initData),
+      "Init data should be valid",
+    );
 
     // Verify user data is preserved
     const urlParams = new URLSearchParams(initData);
@@ -525,28 +551,35 @@ Deno.test("signInitData", async (t) => {
     assertEquals(initData1, initData2, "Same input should produce same output");
   });
 
-  await t.step("should generate different hash for different bot tokens", async () => {
-    const params = {
-      user: {
-        id: 123456789,
-        first_name: "John",
-        last_name: "Doe",
-        username: "johndoe",
-        language_code: "en",
-        is_premium: true,
-      },
-      query_id: "AAFABC123XYZ",
-      auth_date: 1234567890,
-    };
+  await t.step(
+    "should generate different hash for different bot tokens",
+    async () => {
+      const params = {
+        user: {
+          id: 123456789,
+          first_name: "John",
+          last_name: "Doe",
+          username: "johndoe",
+          language_code: "en",
+          is_premium: true,
+        },
+        query_id: "AAFABC123XYZ",
+        auth_date: 1234567890,
+      };
 
-    const botToken1 = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
-    const botToken2 = "654321:XYZ-ABC4321lkIhg-w2v1u123ew11";
+      const botToken1 = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+      const botToken2 = "654321:XYZ-ABC4321lkIhg-w2v1u123ew11";
 
-    const initData1 = await signInitData(botToken1, params);
-    const initData2 = await signInitData(botToken2, params);
+      const initData1 = await signInitData(botToken1, params);
+      const initData2 = await signInitData(botToken2, params);
 
-    assertNotEquals(initData1, initData2, "Different tokens should produce different output");
-  });
+      assertNotEquals(
+        initData1,
+        initData2,
+        "Different tokens should produce different output",
+      );
+    },
+  );
 
   await t.step("should accept pre-stringified user data", async () => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
@@ -567,7 +600,10 @@ Deno.test("signInitData", async (t) => {
     const initData = await signInitData(botToken, params);
 
     // Verify the data is valid
-    assert(tgtb(botToken).isInitDataValid(initData), "Init data should be valid");
+    assert(
+      tgtb(botToken).isInitDataValid(initData),
+      "Init data should be valid",
+    );
 
     // Verify user data is preserved exactly as provided
     const urlParams = new URLSearchParams(initData);
@@ -593,39 +629,49 @@ Deno.test("signInitData", async (t) => {
     const initData = await signInitData(botToken, params);
 
     // Verify the data is valid
-    assert(tgtb(botToken).isInitDataValid(initData), "Init data should be valid");
+    assert(
+      tgtb(botToken).isInitDataValid(initData),
+      "Init data should be valid",
+    );
 
     // Verify user data is preserved exactly as provided
     const urlParams = new URLSearchParams(initData);
     assertEquals(urlParams.get("user"), userString);
   });
 
-  await t.step("should produce same hash for equivalent object and string input", async () => {
-    const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
-    const userObj = {
-      id: 123456789,
-      first_name: "John",
-      last_name: "Doe",
-      username: "johndoe",
-      language_code: "en",
-      is_premium: true,
-    };
+  await t.step(
+    "should produce same hash for equivalent object and string input",
+    async () => {
+      const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+      const userObj = {
+        id: 123456789,
+        first_name: "John",
+        last_name: "Doe",
+        username: "johndoe",
+        language_code: "en",
+        is_premium: true,
+      };
 
-    const paramsWithObj = {
-      user: userObj,
-      query_id: "AAFABC123XYZ",
-      auth_date: 1234567890,
-    };
+      const paramsWithObj = {
+        user: userObj,
+        query_id: "AAFABC123XYZ",
+        auth_date: 1234567890,
+      };
 
-    const paramsWithString = {
-      user: JSON.stringify(userObj),
-      query_id: "AAFABC123XYZ",
-      auth_date: 1234567890,
-    };
+      const paramsWithString = {
+        user: JSON.stringify(userObj),
+        query_id: "AAFABC123XYZ",
+        auth_date: 1234567890,
+      };
 
-    const initData1 = await signInitData(botToken, paramsWithObj);
-    const initData2 = await signInitData(botToken, paramsWithString);
+      const initData1 = await signInitData(botToken, paramsWithObj);
+      const initData2 = await signInitData(botToken, paramsWithString);
 
-    assertEquals(initData1, initData2, "Object and string input should produce same output");
-  });
+      assertEquals(
+        initData1,
+        initData2,
+        "Object and string input should produce same output",
+      );
+    },
+  );
 });

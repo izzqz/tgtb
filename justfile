@@ -20,8 +20,11 @@ test-wasm:
     wasm-pack test --chrome --node --firefox --headless
 
 test:
-    deno test 
+    deno test --trace-leaks --check --parallel --reporter=dot
 
 test-coverage:
     deno test --coverage
     deno coverage --include=src
+
+build-doc:
+    deno doc --html --name="@izzqz/tgtb" src

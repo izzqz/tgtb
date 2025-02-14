@@ -1,5 +1,51 @@
+/**
+ * Utility functions for testing
+ * 
+ * @example Get random init data string
+ * ```ts
+ * import { randomInitData } from "@izzqz/tgtb/test";
+ * 
+ * const bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+ * 
+ * const initData = await randomInitData(bot_token);
+ * initData: "user=%7B%22id%22%3A1234567890%2C%22first_name%22%3A%22John%22%2C%22last_name%22%3A%22Doe%22%2C%22username%22%3A%22johndoe%22%7D&query_id=1234567890&auth_date=1234567890&hash=1234567890"
+ * 
+ * // this init data is valid and could be verified
+ * import tgtb from "@izzqz/tgtb";
+ * 
+ * tgtb(bot_token).isInitDataValid(initData); // true
+ * ```
+ * 
+ * @example Get random bot token
+ * ```ts
+ * import { randomBotToken } from "@izzqz/tgtb/test-utils";
+ * 
+ * const botToken = randomBotToken();
+ * botToken: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+ * ```
+ * 
+ * @module
+ */
+
 import { faker } from "jsr:@jackfiszr/faker";
 
+/**
+ * Generates a random bot token
+ * 
+ * @example
+ * ```ts
+ * import { randomBotToken } from "@izzqz/tgtb/test";
+ * randomBotToken();
+ * // "1542529915:AAG2lazAfktSdXzKacTXfzU2hmcg99POAZQ"
+ * 
+ * // with specific bot id
+ * randomBotToken(1234567);
+ * // "1234567:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+ * ```
+ * 
+ * @param bot_id - The bot ID to use in the token. If not provided, a random ID will be generated.
+ * @returns A random bot token.
+ */
 export function randomBotToken(bot_id?: number): string {
   const BOT_TOKEN_CHARS =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-".split(
@@ -15,10 +61,36 @@ export function randomBotToken(bot_id?: number): string {
   return `${botId}:${botHash}`;
 }
 
+/**
+ * Generates a random bot ID
+ * 
+ * @example
+ * ```ts
+ * import { randomBotId } from "@izzqz/tgtb/test";
+ * 
+ * randomBotId(); // 43496954931
+ * ```
+ * 
+ * @returns A random bot ID
+ */
 export function randomBotId(): number {
   return faker.random.number({ min: 10000000, max: 9999999999 });
 }
 
+/**
+ * Generates a random bot username
+ * 
+ * It will allways ands with bot. Could be in camelCase or snake_case
+ * 
+ * @example
+ * ```ts
+ * import { randomBotUsername } from "@izzqz/tgtb/test";
+ * 
+ * randomBotUsername(); // "tetris_bot"
+ * ```
+ * 
+ * @returns A random bot username
+ */
 export function randomBotUsername(): string {
   // Generate base name (2-29 chars to accommodate 'bot' suffix)
   const baseLength = faker.random.number({ min: 2, max: 28 });
@@ -47,6 +119,14 @@ export function randomBotUsername(): string {
   }
 }
 
+/**
+ * HMAC SHA-256 hash function
+ * 
+ * @private
+ * @param key - The key to use for the hash.
+ * @param data - The data to hash.
+ * @returns The hash of the data.
+ */
 async function hmacSha256(
   key: ArrayBuffer,
   data: ArrayBuffer,
@@ -58,52 +138,108 @@ async function hmacSha256(
     false,
     ["sign"],
   );
-  return crypto.subtle.sign("HMAC", cryptoKey, data);
+  return await crypto.subtle.sign("HMAC", cryptoKey, data);
 }
 
+/**
+ * Converts an ArrayBuffer to a hex string
+ * 
+ * @private
+ * @param buffer - The ArrayBuffer to convert.
+ * @returns The hex string.
+ */
 function buf2hex(buffer: ArrayBuffer): string {
   return Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
 
+/**
+ * Signs the init data
+ * 
+ * You need to specify user object
+ * 
+ * @example
+ * ```ts
+ * 
+ * import { signInitData } from "@izzqz/tgtb/test";
+ * 
+ * const bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+ * const initData = await signInitData(bot_token, {
+ *   user: { id: 1234567890, first_name: "John", last_name: "Doe", username: "johndoe" },
+ *   query_id: "1234567890",
+ *   auth_date: 1234567890,
+ * });
+ * 
+ * initData; // "user=%7B%22id%22%3A1234567890%2C%22first_name%22%3A%22John%22%2C%22last_name%22%3A%22Doe%22%2C%22username%22%3A%22johndoe%22%7D&query_id=1234567890&auth_date=1234567890&hash=1234567890"
+ * 
+ * // this init data is valid and could be verified
+ * import tgtb from "@izzqz/tgtb";
+ * 
+ * tgtb(bot_token).isInitDataValid(initData); // true
+ * ```
+ * 
+ * @param bot_token - The bot token to use for the signature
+ * @param params - The parameters to sign
+ * @returns The signed init data
+ */
 export async function signInitData(
   bot_token: string,
-  params: { user: object | string; query_id: string; auth_date: number },
+  { user, query_id, auth_date }: { user: object | string; query_id: string; auth_date: number },
 ): Promise<string> {
-  const { user, query_id, auth_date } = params;
-
-  // Create data check string
-  const paramsMap = new Map<string, string>([
+  type Entry = [string, string];
+  const entries: Entry[] = [
     ["auth_date", auth_date.toString()],
     ["query_id", query_id],
     ["user", typeof user === "string" ? user : JSON.stringify(user)],
-  ]);
+  ];
 
-  // Sort params alphabetically and create data check string
-  const dataCheckString = Array.from(paramsMap.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, value]) => `${key}=${value}`)
-    .join("\n");
+  const sortedEntries = entries.sort(([a], [b]) => a.localeCompare(b));
 
-  // Create secret key
-  const textEncoder = new TextEncoder();
-  const webAppData = textEncoder.encode("WebAppData");
-  const botTokenData = textEncoder.encode(bot_token);
-  const secretKey = await hmacSha256(webAppData, botTokenData);
+  const { params, dataCheckString } = sortedEntries.reduce<{
+    dataCheckString: string;
+    params: string;
+  }>(
+    (acc, [key, value], index) => ({
+      dataCheckString: acc.dataCheckString + (index ? "\n" : "") + `${key}=${value}`,
+      params: acc.params + (index ? "&" : "") + `${key}=${encodeURIComponent(value)}`,
+    }),
+    { dataCheckString: "", params: "" },
+  );
 
-  // Sign data check string
-  const dataCheckData = textEncoder.encode(dataCheckString);
-  const signature = await hmacSha256(secretKey, dataCheckData);
+  const encoder = new TextEncoder();
+  const secretKey = await hmacSha256(
+    encoder.encode("WebAppData"),
+    encoder.encode(bot_token),
+  );
 
-  // Create final init data string
-  const initDataParams = Array.from(paramsMap.entries())
-    .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
-    .join("&");
+  const signature = await hmacSha256(
+    secretKey,
+    encoder.encode(dataCheckString),
+  );
 
-  return `${initDataParams}&hash=${buf2hex(signature)}`;
+  return `${params}&hash=${buf2hex(signature)}`;
 }
 
+/**
+ * Generates a random init data
+ * 
+ * @example
+ * ```ts
+ * import { randomInitData } from "@izzqz/tgtb/test";
+ * 
+ * const bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+ * 
+ * const initData = await randomInitData(bot_token);
+ * initData; // "user=%7B%22id%22%3A1234567890%2C%22first_name%22%3A%22John%22%2C%22last_name%22%3A%22Doe%22%2C%22username%22%3A%22johndoe%22%7D&query_id=1234567890&auth_date=1234567890&hash=1234567890"
+ * 
+ * // this init data is valid and could be verified
+ * import tgtb from "@izzqz/tgtb";
+ * 
+ * tgtb(bot_token).isInitDataValid(initData); // true
+ * ```
+ * @param bot_token - The bot token to use for signing
+ */
 export async function randomInitData(bot_token: string): Promise<string> {
   const queryId = `AAF${faker.random.alphaNumeric(20)}`;
   const user = {

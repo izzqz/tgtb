@@ -6,11 +6,20 @@ import type {
   TgtbConfig,
 } from "../types/api.ts";
 
+/**
+ * Build a function to call a method
+ * 
+ * @ignore
+ * @internal
+ * @param bot_token - Telegram bot token
+ * @param options - tgtb options
+ * @returns a function to call a method
+ */
 export default function buildCallMethod(
   bot_token: string,
   options: TgtbConfig,
 ) {
-  const { fetch_fn, base_url } = options;
+  const { fetch_fn, base_url } = options as Required<TgtbConfig>;
   return async <M extends BotMethodKeys<F>, F = unknown>(
     method: M,
     params?: Opts<F>[M],

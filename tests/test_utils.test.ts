@@ -1,4 +1,4 @@
-import { assertEquals, assertMatch, assertNotEquals } from "jsr:@std/assert";
+import { assert, assertEquals, assertMatch, assertNotEquals } from "jsr:@std/assert";
 
 import { faker } from "jsr:@jackfiszr/faker";
 import {
@@ -231,44 +231,207 @@ Deno.test("randomBotUsername", async (t) => {
 });
 
 Deno.test("randomInitData", async (t) => {
-  await t.step("should generate valid init data", async () => {
+  await t.step("should generate valid init data with stubbed values", async () => {
+    const now = 1234567890;
+    globalThis.Date.now = () => now * 1000;
+
+    using alphaNumericStub = stub(
+      faker.random,
+      "alphaNumeric",
+      returnsNext(["ABC123XYZ"]),
+    );
+    using numberStub = stub(
+      faker.random,
+      "number",
+      returnsNext([123456789]),
+    );
+    using firstNameStub = stub(
+      faker.name,
+      "firstName",
+      returnsNext(["John"]),
+    );
+    using lastNameStub = stub(
+      faker.name,
+      "lastName",
+      returnsNext(["Doe"]),
+    );
+    using userNameStub = stub(
+      faker.internet,
+      "userName",
+      returnsNext(["johndoe"]),
+    );
+    using arrayElementStub = stub(
+      faker.random,
+      "arrayElement",
+      returnsNext(["en"]),
+    );
+    using booleanStub = stub(
+      faker.random,
+      "boolean",
+      returnsNext([true]),
+    );
+
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const initData = await randomInitData(botToken);
 
-    // Check format
-    assertMatch(initData, /^auth_date=\d+&query_id=AAF[a-zA-Z0-9]+&user=/);
-    assertMatch(initData, /&hash=[a-f0-9]{64}$/);
+    // Verify all faker calls
+    assertSpyCall(alphaNumericStub, 0, {
+      args: [20],
+      returned: "ABC123XYZ",
+    });
+    assertSpyCall(numberStub, 0, {
+      args: [{ min: 10000000, max: 999999999 }],
+      returned: 123456789,
+    });
+    assertSpyCall(firstNameStub, 0, {
+      args: [],
+      returned: "John",
+    });
+    assertSpyCall(lastNameStub, 0, {
+      args: [],
+      returned: "Doe",
+    });
+    assertSpyCall(userNameStub, 0, {
+      args: [],
+      returned: "johndoe",
+    });
+    assertSpyCall(arrayElementStub, 0, {
+      args: [["en", "ru", "es", "de"]],
+      returned: "en",
+    });
+    assertSpyCall(booleanStub, 0, {
+      args: [],
+      returned: true,
+    });
 
-    // Check if it can be parsed
+    // Verify the generated init data structure
     const params = new URLSearchParams(initData);
-    assertEquals(params.has("auth_date"), true);
-    assertEquals(params.has("query_id"), true);
-    assertEquals(params.has("user"), true);
-    assertEquals(params.has("hash"), true);
-
-    // Parse user data
+    
+    // Verify auth_date
+    assertEquals(params.get("auth_date"), "1234567890");
+    
+    // Verify query_id
+    assertEquals(params.get("query_id"), "AAFABC123XYZ");
+    
+    // Verify user object
     const user = JSON.parse(params.get("user")!);
-    assertEquals(typeof user.id, "number");
-    assertEquals(typeof user.first_name, "string");
-    assertEquals(typeof user.last_name, "string");
-    assertEquals(typeof user.username, "string");
-    assertEquals(typeof user.language_code, "string");
-    assertEquals(typeof user.is_premium, "boolean");
+    assertEquals(user, {
+      id: 123456789,
+      first_name: "John",
+      last_name: "Doe",
+      username: "johndoe",
+      language_code: "en",
+      is_premium: true,
+    });
+
+    // Verify hash is correct (64 hex chars)
+    const hash = params.get("hash")!;
+    assertMatch(hash, /^[a-f0-9]{64}$/);
+
+    assert(tgtb(botToken).isInitDataValid(initData), "Init data should be valid");
   });
 
   await t.step("should generate unique data each time", async () => {
+    using alphaNumericStub = stub(
+      faker.random,
+      "alphaNumeric",
+      returnsNext(["ABC123", "XYZ789"]),
+    );
+    using numberStub = stub(
+      faker.random,
+      "number",
+      returnsNext([111111, 222222]),
+    );
+    using firstNameStub = stub(
+      faker.name,
+      "firstName",
+      returnsNext(["Alice", "Bob"]),
+    );
+    using lastNameStub = stub(
+      faker.name,
+      "lastName",
+      returnsNext(["Smith", "Jones"]),
+    );
+    using userNameStub = stub(
+      faker.internet,
+      "userName",
+      returnsNext(["alice", "bob"]),
+    );
+    using arrayElementStub = stub(
+      faker.random,
+      "arrayElement",
+      returnsNext(["en", "ru"]),
+    );
+    using booleanStub = stub(
+      faker.random,
+      "boolean",
+      returnsNext([true, false]),
+    );
+
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const initData1 = await randomInitData(botToken);
     const initData2 = await randomInitData(botToken);
 
     assertNotEquals(initData1, initData2);
+
+    // Verify all stubs were called twice
+    assertSpyCalls(alphaNumericStub, 2);
+    assertSpyCalls(numberStub, 2);
+    assertSpyCalls(firstNameStub, 2);
+    assertSpyCalls(lastNameStub, 2);
+    assertSpyCalls(userNameStub, 2);
+    assertSpyCalls(arrayElementStub, 2);
+    assertSpyCalls(booleanStub, 2);
+    assert(tgtb(botToken).isInitDataValid(initData1), "Init data should be valid");
+    assert(tgtb(botToken).isInitDataValid(initData2), "Init data should be valid");
   });
 
-  await t.step("should generate verifiable data", async () => {
+  await t.step("should handle special characters in user data", async () => {
+    using alphaNumericStub = stub(
+      faker.random,
+      "alphaNumeric",
+      returnsNext(["ABC123"]),
+    );
+    using numberStub = stub(
+      faker.random,
+      "number",
+      returnsNext([123456789]),
+    );
+    using firstNameStub = stub(
+      faker.name,
+      "firstName",
+      returnsNext(["John & Jane"]),
+    );
+    using lastNameStub = stub(
+      faker.name,
+      "lastName",
+      returnsNext(["O'Doe=Smith"]),
+    );
+    using userNameStub = stub(
+      faker.internet,
+      "userName",
+      returnsNext(["john.doe+test"]),
+    );
+    using arrayElementStub = stub(
+      faker.random,
+      "arrayElement",
+      returnsNext(["en"]),
+    );
+    using booleanStub = stub(
+      faker.random,
+      "boolean",
+      returnsNext([true]),
+    );
+
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const initData = await randomInitData(botToken);
 
-    // This should not throw if the data is valid
-    tgtb(botToken).isInitDataValid(initData);
+    assert(tgtb(botToken).isInitDataValid(initData), "Init data should be valid");
+
+    const params = new URLSearchParams(initData);
+    const user = JSON.parse(params.get("user")!);
+    assertEquals(user.first_name, "John & Jane");
+    assertEquals(user.last_name, "O'Doe=Smith");
+    assertEquals(user.username, "john.doe+test");
   });
 });

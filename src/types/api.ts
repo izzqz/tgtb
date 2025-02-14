@@ -62,7 +62,7 @@ export interface TgtbClient<F = unknown> {
    */
   callMethod: <M extends BotMethodKeys<F>>(
     method: M,
-    params?: BotMethodParams<F, M>
+    params?: Opts<F>[M]
   ) => BotMethodResponse<F, M>;
 
   /**

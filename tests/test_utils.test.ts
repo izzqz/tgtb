@@ -455,6 +455,52 @@ Deno.test("randomInitData", async (t) => {
     assertEquals(user.last_name, "O'Doe=Smith");
     assertEquals(user.username, "john.doe+test");
   });
+
+  await t.step("should work without bot_token parameter", async () => {
+    using _alphaNumericStub = stub(
+      faker.random,
+      "alphaNumeric",
+      returnsNext(["ABC123"]),
+    );
+    using _numberStub = stub(
+      faker.random,
+      "number",
+      returnsNext([123456789, 123456789]), // One for bot_id, one for user.id
+    );
+    using _arrayElementStub = stub(
+      faker.random,
+      "arrayElement",
+      returnsNext([...Array(35).fill("A"), "en"]),
+    );
+    using _firstNameStub = stub(
+      faker.name,
+      "firstName",
+      returnsNext(["John"]),
+    );
+    using _lastNameStub = stub(
+      faker.name,
+      "lastName",
+      returnsNext(["Doe"]),
+    );
+    using _userNameStub = stub(
+      faker.internet,
+      "userName",
+      returnsNext(["johndoe"]),
+    );
+    using _booleanStub = stub(
+      faker.random,
+      "boolean",
+      returnsNext([true]),
+    );
+
+    const initData = await randomInitData();
+    const expectedBotToken = "123456789:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+    assert(
+      tgtb(expectedBotToken).isInitDataValid(initData),
+      "Init data should be valid with auto-generated bot token",
+    );
+  });
 });
 
 Deno.test("signInitData", async (t) => {

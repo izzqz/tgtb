@@ -20,10 +20,10 @@ test-wasm:
     wasm-pack test --chrome --node --firefox --headless
 
 test:
-    deno test --trace-leaks --check --parallel --reporter=dot
+    deno test --trace-leaks --check --parallel --reporter=pretty
 
 test-coverage:
-    deno test --coverage
+    deno test --coverage --parallel --reporter=dot
     deno coverage --include=src
 
 build-doc:

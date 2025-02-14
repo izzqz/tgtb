@@ -13,6 +13,7 @@ import {
   randomBotToken,
   randomBotUsername,
   randomInitData,
+  signInitData,
 } from "@izzqz/tgtb/test";
 import tgtb from "@izzqz/tgtb";
 
@@ -433,5 +434,198 @@ Deno.test("randomInitData", async (t) => {
     assertEquals(user.first_name, "John & Jane");
     assertEquals(user.last_name, "O'Doe=Smith");
     assertEquals(user.username, "john.doe+test");
+  });
+});
+
+Deno.test("signInitData", async (t) => {
+  await t.step("should sign init data with provided values", async () => {
+    const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+    const params = {
+      user: {
+        id: 123456789,
+        first_name: "John",
+        last_name: "Doe",
+        username: "johndoe",
+        language_code: "en",
+        is_premium: true,
+      },
+      query_id: "AAFABC123XYZ",
+      auth_date: 1234567890,
+    };
+
+    const initData = await signInitData(botToken, params);
+
+    // Verify the generated init data structure
+    const urlParams = new URLSearchParams(initData);
+    
+    // Verify auth_date
+    assertEquals(urlParams.get("auth_date"), "1234567890");
+    
+    // Verify query_id
+    assertEquals(urlParams.get("query_id"), "AAFABC123XYZ");
+    
+    // Verify user object
+    const user = JSON.parse(urlParams.get("user")!);
+    assertEquals(user, params.user);
+
+    // Verify hash is correct (64 hex chars)
+    const hash = urlParams.get("hash")!;
+    assertMatch(hash, /^[a-f0-9]{64}$/);
+
+    // Verify the data is valid
+    assert(tgtb(botToken).isInitDataValid(initData), "Init data should be valid");
+  });
+
+  await t.step("should handle special characters in user data", async () => {
+    const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+    const params = {
+      user: {
+        id: 123456789,
+        first_name: "John & Jane",
+        last_name: "O'Doe=Smith",
+        username: "john.doe+test",
+        language_code: "en",
+        is_premium: true,
+      },
+      query_id: "AAFABC123XYZ",
+      auth_date: 1234567890,
+    };
+
+    const initData = await signInitData(botToken, params);
+
+    // Verify the data is valid
+    assert(tgtb(botToken).isInitDataValid(initData), "Init data should be valid");
+
+    // Verify user data is preserved
+    const urlParams = new URLSearchParams(initData);
+    const user = JSON.parse(urlParams.get("user")!);
+    assertEquals(user.first_name, "John & Jane");
+    assertEquals(user.last_name, "O'Doe=Smith");
+    assertEquals(user.username, "john.doe+test");
+  });
+
+  await t.step("should generate same hash for same input", async () => {
+    const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+    const params = {
+      user: {
+        id: 123456789,
+        first_name: "John",
+        last_name: "Doe",
+        username: "johndoe",
+        language_code: "en",
+        is_premium: true,
+      },
+      query_id: "AAFABC123XYZ",
+      auth_date: 1234567890,
+    };
+
+    const initData1 = await signInitData(botToken, params);
+    const initData2 = await signInitData(botToken, params);
+
+    assertEquals(initData1, initData2, "Same input should produce same output");
+  });
+
+  await t.step("should generate different hash for different bot tokens", async () => {
+    const params = {
+      user: {
+        id: 123456789,
+        first_name: "John",
+        last_name: "Doe",
+        username: "johndoe",
+        language_code: "en",
+        is_premium: true,
+      },
+      query_id: "AAFABC123XYZ",
+      auth_date: 1234567890,
+    };
+
+    const botToken1 = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+    const botToken2 = "654321:XYZ-ABC4321lkIhg-w2v1u123ew11";
+
+    const initData1 = await signInitData(botToken1, params);
+    const initData2 = await signInitData(botToken2, params);
+
+    assertNotEquals(initData1, initData2, "Different tokens should produce different output");
+  });
+
+  await t.step("should accept pre-stringified user data", async () => {
+    const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+    const userObj = {
+      id: 123456789,
+      first_name: "John",
+      last_name: "Doe",
+      username: "johndoe",
+      language_code: "en",
+      is_premium: true,
+    };
+    const params = {
+      user: JSON.stringify(userObj),
+      query_id: "AAFABC123XYZ",
+      auth_date: 1234567890,
+    };
+
+    const initData = await signInitData(botToken, params);
+
+    // Verify the data is valid
+    assert(tgtb(botToken).isInitDataValid(initData), "Init data should be valid");
+
+    // Verify user data is preserved exactly as provided
+    const urlParams = new URLSearchParams(initData);
+    assertEquals(urlParams.get("user"), JSON.stringify(userObj));
+  });
+
+  await t.step("should handle pre-encoded user string", async () => {
+    const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+    const userString = encodeURIComponent(JSON.stringify({
+      id: 123456789,
+      first_name: "John & Jane",
+      last_name: "O'Doe=Smith",
+      username: "john.doe+test",
+      language_code: "en",
+      is_premium: true,
+    }));
+    const params = {
+      user: userString,
+      query_id: "AAFABC123XYZ",
+      auth_date: 1234567890,
+    };
+
+    const initData = await signInitData(botToken, params);
+
+    // Verify the data is valid
+    assert(tgtb(botToken).isInitDataValid(initData), "Init data should be valid");
+
+    // Verify user data is preserved exactly as provided
+    const urlParams = new URLSearchParams(initData);
+    assertEquals(urlParams.get("user"), userString);
+  });
+
+  await t.step("should produce same hash for equivalent object and string input", async () => {
+    const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+    const userObj = {
+      id: 123456789,
+      first_name: "John",
+      last_name: "Doe",
+      username: "johndoe",
+      language_code: "en",
+      is_premium: true,
+    };
+
+    const paramsWithObj = {
+      user: userObj,
+      query_id: "AAFABC123XYZ",
+      auth_date: 1234567890,
+    };
+
+    const paramsWithString = {
+      user: JSON.stringify(userObj),
+      query_id: "AAFABC123XYZ",
+      auth_date: 1234567890,
+    };
+
+    const initData1 = await signInitData(botToken, paramsWithObj);
+    const initData2 = await signInitData(botToken, paramsWithString);
+
+    assertEquals(initData1, initData2, "Object and string input should produce same output");
   });
 });

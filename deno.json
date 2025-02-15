@@ -3,7 +3,8 @@
   "exports": {
     ".": "./src/mod.ts",
     "./types": "./src/types/telegram.ts",
-    "./utils": "./src/utils/mod.ts"
+    "./utils": "./src/utils/mod.ts",
+    "./constants": "./src/constants.ts"
   },
   "tasks": {
     "dev": "deno run --watch main.ts",

@@ -24,7 +24,7 @@ import {
   signOAuthUser,
 } from "@izzqz/tgtb/utils";
 import tgtb from "@izzqz/tgtb";
-import { TelegramOAuthUser } from "../src/types/telegram.ts";
+import type { TelegramOAuthUser } from "../src/types/telegram.ts";
 
 Deno.test("randomBotToken", async (t) => {
   await t.step("should generate valid bot token", () => {
@@ -1068,27 +1068,27 @@ Deno.test("randomOAuthUser", async (t) => {
   });
 
   await t.step("should work without bot_token parameter", async () => {
-    using numberStub = stub(
+    using _numberStub = stub(
       faker.random,
       "number",
-      returnsNext([123456789, 123456789]), // One for bot_id, one for user.id
+      returnsNext([123456789, 123456789]),
     );
-    using arrayElementStub = stub(
+    using _arrayElementStub = stub(
       faker.random,
       "arrayElement",
       returnsNext([...Array(35).fill("A"), "en"]),
     );
-    using firstNameStub = stub(
+    using _firstNameStub = stub(
       faker.name,
       "firstName",
       returnsNext(["John"]),
     );
-    using lastNameStub = stub(
+    using _lastNameStub = stub(
       faker.name,
       "lastName",
       returnsNext(["Doe"]),
     );
-    using userNameStub = stub(
+    using _userNameStub = stub(
       faker.internet,
       "userName",
       returnsNext(["johndoe"]),
@@ -1106,27 +1106,27 @@ Deno.test("randomOAuthUser", async (t) => {
   await t.step(
     "should handle special characters in generated data",
     async () => {
-      using numberStub = stub(
+      using _numberStub = stub(
         faker.random,
         "number",
         returnsNext([123456789]),
       );
-      using firstNameStub = stub(
+      using _firstNameStub = stub(
         faker.name,
         "firstName",
         returnsNext(["John & Jane"]),
       );
-      using lastNameStub = stub(
+      using _lastNameStub = stub(
         faker.name,
         "lastName",
         returnsNext(["O'Doe=Smith"]),
       );
-      using userNameStub = stub(
+      using _userNameStub = stub(
         faker.internet,
         "userName",
         returnsNext(["john.doe+test"]),
       );
-      using imageUrlStub = stub(
+      using _imageUrlStub = stub(
         faker.image,
         "imageUrl",
         returnsNext(["https://example.com/photo+test.jpg"]),

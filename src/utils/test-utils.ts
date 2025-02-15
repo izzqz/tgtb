@@ -29,7 +29,7 @@
 
 import { faker } from "jsr:@jackfiszr/faker";
 import { TOKEN_CHARS } from "../constants.ts";
-import { TelegramOAuthUser } from "../types/telegram.ts";
+import type { TelegramOAuthUser } from "../types/telegram.ts";
 /**
  * Generates a random bot token
  *

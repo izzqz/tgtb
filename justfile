@@ -27,8 +27,9 @@ test:
     deno test --trace-leaks --check --parallel --reporter=dot
 
 test-coverage:
+    @rm -rf coverage
     deno test --coverage --parallel --reporter=dot
-    deno coverage --include=src
+    deno coverage --include=src --detailed
 
 build-doc:
     deno doc --html --name="@izzqz/tgtb" src

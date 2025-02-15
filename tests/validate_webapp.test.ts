@@ -168,6 +168,21 @@ Deno.test("validate_webapp", async (t) => {
     );
   });
 
+  await t.step("should return false for invalid init data in isValid", () => {
+    const invalidData = "invalid_data";
+    assertEquals(client.init_data.isValid(invalidData), false);
+  });
+
+  await t.step("should return true from validate for valid data", async () => {
+    const auth_date = Math.floor(Date.now() / 1000);
+    const validData = await signInitData(BOT_TOKEN, {
+      user: { id: 123456789, first_name: "Test" },
+      query_id: "test123",
+      auth_date,
+    });
+    assertEquals(client.init_data.validate(validData), true);
+  });
+
   await t.step("should handle encoded special characters", () => {
     const initData = `key%3D=value%26&hash=${"0".repeat(64)}`;
 

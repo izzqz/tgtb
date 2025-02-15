@@ -19,7 +19,8 @@ import {
   randomBotUsername,
   randomInitData,
   signInitData,
-} from "@izzqz/tgtb/test";
+  createSecret,
+} from "@izzqz/tgtb/utils";
 import tgtb from "@izzqz/tgtb";
 
 Deno.test("randomBotToken", async (t) => {
@@ -720,4 +721,60 @@ Deno.test("signInitData", async (t) => {
       );
     },
   );
+});
+
+Deno.test("createSecret", async (t) => {
+  await t.step("should generate valid secret with default length", () => {
+    const secret = createSecret();
+    assertMatch(
+      secret,
+      /^[A-Za-z0-9_-]{256}$/,
+      `Secret should only contain allowed characters and be 256 chars long (${secret})`,
+    );
+  });
+
+  await t.step("should generate valid secret with custom length", () => {
+    const lengths = [1, 16, 32, 128, 256];
+    for (const length of lengths) {
+      const secret = createSecret(length);
+      assertMatch(
+        secret,
+        /^[A-Za-z0-9_-]+$/,
+        `Secret should only contain allowed characters (${secret})`,
+      );
+      assertEquals(
+        secret.length,
+        length,
+        `Secret length should match specified length (got ${secret.length}, expected ${length})`,
+      );
+    }
+  });
+
+  await t.step("should generate unique secrets", () => {
+    const secret1 = createSecret();
+    const secret2 = createSecret();
+    const secret3 = createSecret();
+
+    assertNotEquals(secret1, secret2, "Consecutive secrets should be different");
+    assertNotEquals(secret2, secret3, "Consecutive secrets should be different");
+    assertNotEquals(secret1, secret3, "Consecutive secrets should be different");
+  });
+
+  await t.step("should use cryptographically secure random values", () => {
+    const mockValues = new Uint8Array([65, 66, 67]); // ABC
+    using randomStub = stub(
+      crypto,
+      "getRandomValues",
+      returnsNext([mockValues]),
+    );
+
+    const secret = createSecret(3);
+    
+    assertSpyCall(randomStub, 0, {
+      args: [new Uint8Array(3)],
+      returned: mockValues,
+    });
+    assertSpyCalls(randomStub, 1);
+    assertMatch(secret, /^[A-Za-z0-9_-]{3}$/);
+  });
 });

@@ -1,5 +1,5 @@
 import { create_validator } from "../../lib/tg_validator.js";
-import type { TgtbConfig } from "../mod.ts";
+import type { TgtbConfig } from "../types/interface.ts";
 
 /**
  * @ignore

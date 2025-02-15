@@ -28,7 +28,7 @@
  */
 
 import { faker } from "jsr:@jackfiszr/faker";
-
+import { TOKEN_CHARS } from "../constants.ts";
 /**
  * Generates a random bot token
  * 
@@ -47,15 +47,10 @@ import { faker } from "jsr:@jackfiszr/faker";
  * @returns A random bot token.
  */
 export function randomBotToken(bot_id?: number): string {
-  const BOT_TOKEN_CHARS =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-".split(
-      "",
-    );
-
   const botId = bot_id ?? randomBotId();
   const botHash = Array.from(
     { length: 35 },
-    () => faker.random.arrayElement(BOT_TOKEN_CHARS),
+    () => faker.random.arrayElement(TOKEN_CHARS.split("")),
   ).join("");
 
   return `${botId}:${botHash}`;

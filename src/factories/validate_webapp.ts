@@ -8,8 +8,8 @@ import type { TgtbConfig } from "../types/interface.ts";
  * @param config
  * @returns
  */
-export default function buildInitDataTools(bot_token: string, config: TgtbConfig) {
-  const validate = create_validator(bot_token);
+export default function buildInitDataTools(bot_token: string, { init_data_expiration }: TgtbConfig) {
+  const validate = create_validator(bot_token, init_data_expiration);
 
   return {
     isValid: (init_data: string): boolean => {

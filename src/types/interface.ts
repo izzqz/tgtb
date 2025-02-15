@@ -121,4 +121,10 @@ export interface TgtbConfig {
    * @see https://core.telegram.org/bots/features#testing-your-bot
    */
   use_test_mode?: boolean;
+  /**
+   * Time in seconds after which the init data will be considered expired
+   * If 0, null, or undefined, expiration check is disabled
+   * @default null (disabled)
+   */
+  init_data_expiration?: number | null;
 }

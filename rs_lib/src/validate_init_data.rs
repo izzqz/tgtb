@@ -157,7 +157,7 @@ pub fn create_validator(bot_token: &str, expires_in: Option<u32>) -> Result<Func
           .map_err(|e| ValidationError::ParseError(e.to_string()))?;
 
         let now = (js_sys::Date::now() as u64 / 1000) as u32; // Convert milliseconds to seconds
-        if auth_timestamp + expires_in < now {
+        if auth_timestamp + expires_in <= now {
           return Err(ValidationError::Expired);
         }
       }

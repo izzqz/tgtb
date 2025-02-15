@@ -44,10 +44,11 @@ import buildAPICaller from "./factories/call_method.ts";
  * Default options for the TgtbClient
  * @internal
  */
-export const DEFAULT_CONFIG: TgtbConfig = Object.freeze({
+export const DEFAULT_CONFIG: Required<TgtbConfig> = Object.freeze({
   fetch_fn: globalThis.fetch,
   base_url: "https://api.telegram.org/bot",
-  use_test_mode: false
+  use_test_mode: false,
+  init_data_expiration: null
 });
 
 /**

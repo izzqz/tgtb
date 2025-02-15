@@ -235,7 +235,7 @@ export async function signInitData(
  * ```
  * @param bot_token - The bot token to use for signing
  */
-export async function randomInitData(bot_token = randomBotToken()): Promise<string> {
+export async function randomInitData(bot_token: string = randomBotToken()): Promise<string> {
   const queryId = `AAF${faker.random.alphaNumeric(20)}`;
   const user = {
     id: faker.random.number({ min: 10000000, max: 999999999 }),

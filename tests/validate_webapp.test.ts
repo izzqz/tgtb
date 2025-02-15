@@ -1,9 +1,5 @@
 import { assertEquals, assertThrows } from "jsr:@std/assert";
 import tgtb from "@izzqz/tgtb";
-import {
-  assertSpyCalls,
-  spy,
-} from "jsr:@std/testing/mock";
 import { FakeTime } from "jsr:@std/testing/time";
 import { signInitData } from "../src/utils/test-utils.ts";
 

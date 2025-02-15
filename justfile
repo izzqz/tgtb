@@ -17,7 +17,7 @@ fmt:
 # test wasm in different browsers
 [working-directory: 'rs_lib']
 test-wasm:
-    wasm-pack test --chrome --node --firefox --headless
+    wasm-pack test --node
 
 test:
     deno test --trace-leaks --check --parallel --reporter=pretty

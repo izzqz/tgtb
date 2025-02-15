@@ -1,4 +1,9 @@
-import type { ApiMethods, ApiResponse, Opts } from "./telegram.ts";
+import type {
+  ApiMethods,
+  ApiResponse,
+  Opts,
+  TelegramOAuthUser,
+} from "./telegram.ts";
 
 export type { ApiMethods, ApiResponse, Opts } from "./telegram.ts";
 
@@ -103,6 +108,17 @@ export interface Client<F = unknown> {
      */
     validate: (init_data: string) => true | Error;
   };
+
+  oauth: {
+    /**
+     * Validate user data from telegram widget and return boolean
+     */
+    isValid: (oauth_user: TelegramOAuthUser) => boolean;
+    /**
+     * Validate user data from telegram widget and trow if not valid
+     */
+    validate: (oauth_user: TelegramOAuthUser) => true | Error;
+  };
 }
 
 /**
@@ -126,9 +142,9 @@ export interface TgtbConfig {
    */
   use_test_mode?: boolean;
   /**
-   * Time in seconds after which the init data will be considered expired
+   * Time in seconds after which the hash will be considered expired
    * If 0, null, or undefined, expiration check is disabled
    * @default null (disabled)
    */
-  init_data_expiration?: number | null;
+  hash_expiration?: number | null;
 }

@@ -19,9 +19,12 @@ import {
   randomBotToken,
   randomBotUsername,
   randomInitData,
+  randomOAuthUser,
   signInitData,
+  signOAuthUser,
 } from "@izzqz/tgtb/utils";
 import tgtb from "@izzqz/tgtb";
+import { TelegramOAuthUser } from "../src/types/telegram.ts";
 
 Deno.test("randomBotToken", async (t) => {
   await t.step("should generate valid bot token", () => {
@@ -338,7 +341,7 @@ Deno.test("randomInitData", async (t) => {
       assertMatch(hash, /^[a-f0-9]{64}$/);
 
       assert(
-        tgtb(botToken).init_data.isValid(initData),
+        tgtb(botToken).init_data.validate(initData),
         "Init data should be valid",
       );
     },
@@ -396,11 +399,11 @@ Deno.test("randomInitData", async (t) => {
     assertSpyCalls(arrayElementStub, 2);
     assertSpyCalls(booleanStub, 2);
     assert(
-      tgtb(botToken).init_data.isValid(initData1),
+      tgtb(botToken).init_data.validate(initData1),
       "Init data should be valid",
     );
     assert(
-      tgtb(botToken).init_data.isValid(initData2),
+      tgtb(botToken).init_data.validate(initData2),
       "Init data should be valid",
     );
   });
@@ -446,7 +449,7 @@ Deno.test("randomInitData", async (t) => {
     const initData = await randomInitData(botToken);
 
     assert(
-      tgtb(botToken).init_data.isValid(initData),
+      tgtb(botToken).init_data.validate(initData),
       "Init data should be valid",
     );
 
@@ -498,7 +501,7 @@ Deno.test("randomInitData", async (t) => {
     const expectedBotToken = "123456789:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
     assert(
-      tgtb(expectedBotToken).init_data.isValid(initData),
+      tgtb(expectedBotToken).init_data.validate(initData),
       "Init data should be valid with auto-generated bot token",
     );
   });
@@ -541,7 +544,7 @@ Deno.test("signInitData", async (t) => {
 
     // Verify the data is valid
     assert(
-      tgtb(botToken).init_data.isValid(initData),
+      tgtb(botToken).init_data.validate(initData),
       "Init data should be valid",
     );
   });
@@ -565,7 +568,7 @@ Deno.test("signInitData", async (t) => {
 
     // Verify the data is valid
     assert(
-      tgtb(botToken).init_data.isValid(initData),
+      tgtb(botToken).init_data.validate(initData),
       "Init data should be valid",
     );
 
@@ -648,7 +651,7 @@ Deno.test("signInitData", async (t) => {
 
     // Verify the data is valid
     assert(
-      tgtb(botToken).init_data.isValid(initData),
+      tgtb(botToken).init_data.validate(initData),
       "Init data should be valid",
     );
 
@@ -677,7 +680,7 @@ Deno.test("signInitData", async (t) => {
 
     // Verify the data is valid
     assert(
-      tgtb(botToken).init_data.isValid(initData),
+      tgtb(botToken).init_data.validate(initData),
       "Init data should be valid",
     );
 
@@ -789,4 +792,358 @@ Deno.test("createSecret", async (t) => {
     assertSpyCalls(randomStub, 1);
     assertMatch(secret, /^[A-Za-z0-9_-]{3}$/);
   });
+});
+
+Deno.test("signOAuthUser", async (t) => {
+  await t.step("should sign user data with provided values", async () => {
+    const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+    const user: Omit<TelegramOAuthUser, "hash"> = {
+      id: 123456789,
+      first_name: "John",
+      last_name: "Doe",
+      username: "johndoe",
+      photo_url: "https://example.com/photo.jpg",
+      auth_date: 1234567890,
+    };
+
+    const signedData = await signOAuthUser(botToken, user);
+
+    // Verify all original fields are preserved with correct types
+    assertEquals(signedData.id, 123456789);
+    assertEquals(signedData.first_name, "John");
+    assertEquals(signedData.last_name, "Doe");
+    assertEquals(signedData.username, "johndoe");
+    assertEquals(signedData.photo_url, "https://example.com/photo.jpg");
+    assertEquals(signedData.auth_date, 1234567890);
+
+    // Verify hash is present and valid (64 hex chars)
+    assertMatch(signedData.hash, /^[a-f0-9]{64}$/);
+
+    // Verify the data is valid
+    assert(
+      tgtb(botToken).oauth.validate(signedData),
+      "Signed data should be valid",
+    );
+  });
+
+  await t.step("should handle special characters in user data", async () => {
+    const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+    const user: Omit<TelegramOAuthUser, "hash"> = {
+      id: 123456789,
+      first_name: "John & Jane",
+      last_name: "O'Doe=Smith",
+      username: "john.doe+test",
+      photo_url: "https://example.com/photo.jpg",
+      auth_date: 1234567890,
+    };
+
+    const signedData = await signOAuthUser(botToken, user);
+
+    // Verify special characters are preserved
+    assertEquals(signedData.first_name, "John & Jane");
+    assertEquals(signedData.last_name, "O'Doe=Smith");
+    assertEquals(signedData.username, "john.doe+test");
+
+    // Verify the data is valid
+    assert(
+      tgtb(botToken).oauth.validate(signedData),
+      "Signed data should be valid",
+    );
+  });
+
+  await t.step("should generate same hash for same input", async () => {
+    const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+    const user: Omit<TelegramOAuthUser, "hash"> = {
+      id: 123456789,
+      first_name: "John",
+      last_name: "Doe",
+      username: "johndoe",
+      photo_url: "https://example.com/photo.jpg",
+      auth_date: 1234567890,
+    };
+
+    const signedData1 = await signOAuthUser(botToken, user);
+    const signedData2 = await signOAuthUser(botToken, user);
+
+    assertEquals(
+      signedData1.hash,
+      signedData2.hash,
+      "Same input should produce same hash",
+    );
+  });
+
+  await t.step(
+    "should generate different hash for different bot tokens",
+    async () => {
+      const user: Omit<TelegramOAuthUser, "hash"> = {
+        id: 123456789,
+        first_name: "John",
+        last_name: "Doe",
+        username: "johndoe",
+        photo_url: "https://example.com/photo.jpg",
+        auth_date: 1234567890,
+      };
+
+      const botToken1 = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+      const botToken2 = "654321:XYZ-ABC4321lkIhg-w2v1u123ew11";
+
+      const signedData1 = await signOAuthUser(botToken1, user);
+      const signedData2 = await signOAuthUser(botToken2, user);
+
+      assertNotEquals(
+        signedData1.hash,
+        signedData2.hash,
+        "Different tokens should produce different hashes",
+      );
+    },
+  );
+
+  await t.step("should handle null and undefined values", async () => {
+    const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+    const user = {
+      id: 123456789,
+      first_name: "John",
+      last_name: undefined,
+      username: undefined,
+      photo_url: "https://example.com/photo.jpg",
+      auth_date: 1234567890,
+    } as Omit<TelegramOAuthUser, "hash">;
+
+    const signedData = await signOAuthUser(botToken, user);
+
+    // Verify null and undefined fields are omitted
+    assert(!("last_name" in signedData), "Undefined fields should be omitted");
+    assert(!("username" in signedData), "Undefined fields should be omitted");
+
+    // Verify the data is valid
+    assert(
+      tgtb(botToken).oauth.validate(signedData),
+      "Signed data should be valid",
+    );
+  });
+});
+
+Deno.test("randomOAuthUser", async (t) => {
+  await t.step(
+    "should generate valid user data with stubbed values",
+    async () => {
+      const now = 1234567890;
+      globalThis.Date.now = () => now * 1000;
+
+      using numberStub = stub(
+        faker.random,
+        "number",
+        returnsNext([123456789]),
+      );
+      using firstNameStub = stub(
+        faker.name,
+        "firstName",
+        returnsNext(["John"]),
+      );
+      using lastNameStub = stub(
+        faker.name,
+        "lastName",
+        returnsNext(["Doe"]),
+      );
+      using userNameStub = stub(
+        faker.internet,
+        "userName",
+        returnsNext(["johndoe"]),
+      );
+      using imageUrlStub = stub(
+        faker.image,
+        "imageUrl",
+        returnsNext(["https://example.com/photo.jpg"]),
+      );
+
+      const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+      const user = await randomOAuthUser(botToken);
+
+      // Verify all faker calls
+      assertSpyCall(numberStub, 0, {
+        args: [{ min: 10000000, max: 999999999 }],
+        returned: 123456789,
+      });
+      assertSpyCall(firstNameStub, 0, {
+        args: [],
+        returned: "John",
+      });
+      assertSpyCall(lastNameStub, 0, {
+        args: [],
+        returned: "Doe",
+      });
+      assertSpyCall(userNameStub, 0, {
+        args: [],
+        returned: "johndoe",
+      });
+      assertSpyCall(imageUrlStub, 0, {
+        args: [],
+        returned: "https://example.com/photo.jpg",
+      });
+
+      // Verify generated user structure
+      assertEquals(user.id, 123456789);
+      assertEquals(user.first_name, "John");
+      assertEquals(user.last_name, "Doe");
+      assertEquals(user.username, "johndoe");
+      assertEquals(user.photo_url, "https://example.com/photo.jpg");
+      assertEquals(user.auth_date, 1234567890);
+
+      // Verify hash is present and valid
+      assertMatch(user.hash, /^[a-f0-9]{64}$/);
+
+      // Verify the data is valid
+      assert(
+        tgtb(botToken).oauth.validate(user),
+        "Generated user should be valid",
+      );
+    },
+  );
+
+  await t.step("should generate unique data each time", async () => {
+    const now1 = 1234567890;
+    const now2 = 1234567891;
+    let currentTime = now1;
+    globalThis.Date.now = () => currentTime * 1000;
+
+    using numberStub = stub(
+      faker.random,
+      "number",
+      returnsNext([111111, 222222]),
+    );
+    using firstNameStub = stub(
+      faker.name,
+      "firstName",
+      returnsNext(["Alice", "Bob"]),
+    );
+    using lastNameStub = stub(
+      faker.name,
+      "lastName",
+      returnsNext(["Smith", "Jones"]),
+    );
+    using userNameStub = stub(
+      faker.internet,
+      "userName",
+      returnsNext(["alice", "bob"]),
+    );
+    using imageUrlStub = stub(
+      faker.image,
+      "imageUrl",
+      returnsNext([
+        "https://example1.com/photo.jpg",
+        "https://example2.com/photo.jpg",
+      ]),
+    );
+
+    const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+    const user1 = await randomOAuthUser(botToken);
+
+    currentTime = now2;
+    const user2 = await randomOAuthUser(botToken);
+
+    assertNotEquals(user1.id, user2.id);
+    assertNotEquals(user1.first_name, user2.first_name);
+    assertNotEquals(user1.last_name, user2.last_name);
+    assertNotEquals(user1.username, user2.username);
+    assertNotEquals(user1.photo_url, user2.photo_url);
+    assertNotEquals(user1.auth_date, user2.auth_date);
+    assertNotEquals(user1.hash, user2.hash);
+
+    // Verify all stubs were called twice
+    assertSpyCalls(numberStub, 2);
+    assertSpyCalls(firstNameStub, 2);
+    assertSpyCalls(lastNameStub, 2);
+    assertSpyCalls(userNameStub, 2);
+    assertSpyCalls(imageUrlStub, 2);
+
+    // Verify both users are valid
+    assert(
+      tgtb(botToken).oauth.validate(user1),
+      "First user should be valid",
+    );
+    assert(
+      tgtb(botToken).oauth.validate(user2),
+      "Second user should be valid",
+    );
+  });
+
+  await t.step("should work without bot_token parameter", async () => {
+    using numberStub = stub(
+      faker.random,
+      "number",
+      returnsNext([123456789, 123456789]), // One for bot_id, one for user.id
+    );
+    using arrayElementStub = stub(
+      faker.random,
+      "arrayElement",
+      returnsNext([...Array(35).fill("A"), "en"]),
+    );
+    using firstNameStub = stub(
+      faker.name,
+      "firstName",
+      returnsNext(["John"]),
+    );
+    using lastNameStub = stub(
+      faker.name,
+      "lastName",
+      returnsNext(["Doe"]),
+    );
+    using userNameStub = stub(
+      faker.internet,
+      "userName",
+      returnsNext(["johndoe"]),
+    );
+
+    const user = await randomOAuthUser();
+    const expectedBotToken = "123456789:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+    assert(
+      tgtb(expectedBotToken).oauth.validate(user),
+      "User should be valid with auto-generated bot token",
+    );
+  });
+
+  await t.step(
+    "should handle special characters in generated data",
+    async () => {
+      using numberStub = stub(
+        faker.random,
+        "number",
+        returnsNext([123456789]),
+      );
+      using firstNameStub = stub(
+        faker.name,
+        "firstName",
+        returnsNext(["John & Jane"]),
+      );
+      using lastNameStub = stub(
+        faker.name,
+        "lastName",
+        returnsNext(["O'Doe=Smith"]),
+      );
+      using userNameStub = stub(
+        faker.internet,
+        "userName",
+        returnsNext(["john.doe+test"]),
+      );
+      using imageUrlStub = stub(
+        faker.image,
+        "imageUrl",
+        returnsNext(["https://example.com/photo+test.jpg"]),
+      );
+
+      const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+      const user = await randomOAuthUser(botToken);
+
+      assertEquals(user.first_name, "John & Jane");
+      assertEquals(user.last_name, "O'Doe=Smith");
+      assertEquals(user.username, "john.doe+test");
+      assertEquals(user.photo_url, "https://example.com/photo+test.jpg");
+
+      assert(
+        tgtb(botToken).oauth.validate(user),
+        "User with special characters should be valid",
+      );
+    },
+  );
 });

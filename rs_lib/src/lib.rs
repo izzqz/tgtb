@@ -1,6 +1,5 @@
 mod validate_init_data;
+mod validate_oauth;
 
 pub use validate_init_data::*;
-
-#[cfg(test)]
-mod tests {}
+pub use validate_oauth::*;

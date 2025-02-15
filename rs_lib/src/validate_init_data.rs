@@ -198,7 +198,8 @@ mod tests {
 
   #[wasm_bindgen_test]
   fn test_real_world_valid_init_data() {
-    let validate = create_init_data_validator(VALID_BOT_TOKEN, Some(0)).unwrap(); // Disable expiration for this test
+    let validate =
+      create_init_data_validator(VALID_BOT_TOKEN, Some(0)).unwrap(); // Disable expiration for this test
     let result = validate
       .call1(&JsValue::NULL, &JsValue::from_str(VALID_INIT_DATA))
       .unwrap();

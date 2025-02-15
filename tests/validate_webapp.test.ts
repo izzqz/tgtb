@@ -242,7 +242,7 @@ Deno.test("validate_webapp", async (t) => {
           auth_date,
         });
 
-        const client = tgtb(BOT_TOKEN, { init_data_expiration: 3600 }); // 1 hour expiration
+        const client = tgtb(BOT_TOKEN, { hash_expiration: 3600 }); // 1 hour expiration
 
         // Check immediately - should be valid
         assertEquals(client.init_data.isValid(initData), true);
@@ -269,7 +269,7 @@ Deno.test("validate_webapp", async (t) => {
         auth_date,
       });
 
-      const client = tgtb(BOT_TOKEN, { init_data_expiration: 0 });
+      const client = tgtb(BOT_TOKEN, { hash_expiration: 0 });
 
       // Check immediately
       assertEquals(client.init_data.isValid(initData), true);
@@ -287,7 +287,7 @@ Deno.test("validate_webapp", async (t) => {
         auth_date,
       });
 
-      const client = tgtb(BOT_TOKEN, { init_data_expiration: null });
+      const client = tgtb(BOT_TOKEN, { hash_expiration: null });
 
       // Check immediately
       assertEquals(client.init_data.isValid(initData), true);
@@ -323,7 +323,7 @@ Deno.test("validate_webapp", async (t) => {
         auth_date: startTime,
       });
 
-      const client = tgtb(BOT_TOKEN, { init_data_expiration: 60 }); // 60 seconds expiration
+      const client = tgtb(BOT_TOKEN, { hash_expiration: 60 }); // 60 seconds expiration
 
       // Initial check - should be valid
       assertEquals(client.init_data.isValid(initData), true);

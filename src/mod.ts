@@ -32,6 +32,7 @@
 import type { Client, TgtbConfig } from "./types/interface.ts";
 import buildInitDataTools from "./factories/validate_webapp.ts";
 import buildAPICaller from "./factories/call_method.ts";
+import buildOAuthTools from "./factories/validate_oauth.ts";
 
 /**
  * Default options for the TgtbClient
@@ -41,7 +42,7 @@ export const DEFAULT_CONFIG: Required<TgtbConfig> = Object.freeze({
   fetch_fn: globalThis.fetch,
   base_url: "https://api.telegram.org/bot",
   use_test_mode: false,
-  init_data_expiration: null,
+  hash_expiration: null,
 });
 
 /**
@@ -87,6 +88,7 @@ export default function tgtb(
   return {
     api: buildAPICaller(bot_token, mergedConfig),
     init_data: buildInitDataTools(bot_token, mergedConfig),
+    oauth: buildOAuthTools(bot_token, mergedConfig),
   };
 }
 

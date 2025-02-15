@@ -10,9 +10,9 @@ import type { TgtbConfig } from "../types/interface.ts";
  */
 export default function buildInitDataTools(
   bot_token: string,
-  { init_data_expiration }: TgtbConfig,
+  { hash_expiration }: TgtbConfig,
 ) {
-  const validate = create_init_data_validator(bot_token, init_data_expiration);
+  const validate = create_init_data_validator(bot_token, hash_expiration);
 
   return {
     isValid: (init_data: string): boolean => {

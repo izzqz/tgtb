@@ -29,6 +29,7 @@
 
 import { faker } from "jsr:@jackfiszr/faker";
 import { TOKEN_CHARS } from "../constants.ts";
+import { TelegramOAuthUser } from "../types/telegram.ts";
 /**
  * Generates a random bot token
  *
@@ -260,4 +261,115 @@ export async function randomInitData(
     query_id: queryId,
     auth_date: authDate,
   });
+}
+
+/**
+ * Signs the OAuth user data
+ *
+ * @example
+ * ```ts
+ * import { signOAuthUser } from "@izzqz/tgtb/utils";
+ *
+ * const bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+ * const user = {
+ *   id: 1234567890,
+ *   first_name: "John",
+ *   last_name: "Doe",
+ *   username: "johndoe",
+ *   auth_date: 1234567890,
+ * };
+ *
+ * const signedData = await signOAuthUser(bot_token, user);
+ * // { id: "1234567890", first_name: "John", ... hash: "..." }
+ * ```
+ *
+ * @param bot_token - The bot token to use for signing
+ * @param user - The user data to sign
+ * @returns The signed user data with hash
+ */
+export async function signOAuthUser(
+  bot_token: string,
+  user: Omit<TelegramOAuthUser, "hash">,
+): Promise<TelegramOAuthUser> {
+  // Convert all values to strings and filter out undefined/null
+  const entries = Object.entries(user)
+    .filter(([key, value]) => value != null && key !== "hash")
+    .map(([key, value]) => [key, String(value)]);
+
+  const sortedEntries = entries.sort(([a], [b]) => a.localeCompare(b));
+
+  const dataCheckString = sortedEntries
+    .map(([key, value]) => `${key}=${value}`)
+    .join("\n");
+
+  const encoder = new TextEncoder();
+  const secretKey = await crypto.subtle.digest(
+    "SHA-256",
+    encoder.encode(bot_token),
+  );
+
+  const hmacKey = await crypto.subtle.importKey(
+    "raw",
+    secretKey,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    hmacKey,
+    encoder.encode(dataCheckString),
+  );
+
+  // Convert back to original types for id and auth_date
+  const processedEntries = entries.map(([key, value]) => {
+    if (key === "id") {
+      return [key, parseInt(value, 10)];
+    }
+    if (key === "auth_date") {
+      return [key, parseInt(value, 10)];
+    }
+    return [key, value];
+  });
+
+  return {
+    ...Object.fromEntries(processedEntries),
+    hash: buf2hex(signature),
+  };
+}
+
+/**
+ * Generates random OAuth user data
+ *
+ * @example
+ * ```ts
+ * import { randomOAuthUser } from "@izzqz/tgtb/utils";
+ *
+ * const bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+ * const user = await randomOAuthUser(bot_token);
+ * // { id: "1234567890", first_name: "John", ... hash: "..." }
+ *
+ * // this user data is valid and could be verified
+ * import tgtb from "@izzqz/tgtb";
+ *
+ * tgtb(bot_token).oauth.validate(user); // true
+ * ```
+ *
+ * @param bot_token - The bot token to use for signing. If not provided, a random one will be generated.
+ * @returns Random signed user data
+ */
+export async function randomOAuthUser(
+  bot_token: string = randomBotToken(),
+): Promise<TelegramOAuthUser> {
+  const user: Omit<TelegramOAuthUser, "hash"> = {
+    id: faker.random.number({ min: 10000000, max: 999999999 }),
+    first_name: faker.name.firstName(),
+    last_name: faker.name.lastName(),
+    username: faker.internet.userName(),
+    photo_url: faker.image.imageUrl(),
+    auth_date: Math.floor(Date.now() / 1000),
+  };
+
+  return await signOAuthUser(bot_token, user);
 }

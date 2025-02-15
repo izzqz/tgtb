@@ -72,21 +72,25 @@ fn build_data_check_string(
     }
 
     // Convert numeric values to strings
-    let value_str = if js_sys::Number::is_integer(&value) || value.as_f64().is_some() {
-      value.as_f64()
-        .ok_or_else(|| ValidationError::InvalidData(format!(
-          "Failed to convert number for key '{}' to string",
-          key
-        )))?
-        .to_string()
-    } else {
-      value.as_string().ok_or_else(|| {
-        ValidationError::InvalidData(format!(
-          "Value for key '{}' is not a string or number",
-          key
-        ))
-      })?
-    };
+    let value_str =
+      if js_sys::Number::is_integer(&value) || value.as_f64().is_some() {
+        value
+          .as_f64()
+          .ok_or_else(|| {
+            ValidationError::InvalidData(format!(
+              "Failed to convert number for key '{}' to string",
+              key
+            ))
+          })?
+          .to_string()
+      } else {
+        value.as_string().ok_or_else(|| {
+          ValidationError::InvalidData(format!(
+            "Value for key '{}' is not a string or number",
+            key
+          ))
+        })?
+      };
 
     if !value_str.is_empty() {
       pairs.push(format!("{}={}", key, value_str));
@@ -139,20 +143,28 @@ pub fn create_oauth_validator(
 
         // Check expiration if enabled
         if expires_in > 0 {
-          let auth_date = js_sys::Reflect::get(&data, &JsValue::from_str("auth_date"))
-            .map_err(|_| {
-              ValidationError::MissingField(
-                "auth_date field not found".into(),
-              )
-            })?;
+          let auth_date =
+            js_sys::Reflect::get(&data, &JsValue::from_str("auth_date"))
+              .map_err(|_| {
+                ValidationError::MissingField(
+                  "auth_date field not found".into(),
+                )
+              })?;
 
           let auth_timestamp = if auth_date.as_f64().is_some() {
-            auth_date.as_f64()
-              .ok_or_else(|| ValidationError::InvalidData("auth_date is not a valid number".into()))?
-              as u32
+            auth_date.as_f64().ok_or_else(|| {
+              ValidationError::InvalidData(
+                "auth_date is not a valid number".into(),
+              )
+            })? as u32
           } else {
-            auth_date.as_string()
-              .ok_or_else(|| ValidationError::InvalidData("auth_date is not a string or number".into()))?
+            auth_date
+              .as_string()
+              .ok_or_else(|| {
+                ValidationError::InvalidData(
+                  "auth_date is not a string or number".into(),
+                )
+              })?
               .parse::<u32>()
               .map_err(|e| ValidationError::ParseError(e.to_string()))?
           };

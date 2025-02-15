@@ -16,7 +16,7 @@
  * const bot = tgtb("123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11");
  *
  * // call a method
- * const res = await bot.callMethod("getMe");
+ * const res = await bot.api.getMe();
  *
  * // it does not throw an error when ok is false
  * if (res.ok) {
@@ -24,12 +24,6 @@
  * } else {
  *   console.error(res.description);
  * }
- * ```
- *
- * @example Validate data from webapp
- * ```ts
- * const initData = "";
- * bot.isInitDataValid(initData); // true or Error
  * ```
  *
  * @module
@@ -55,7 +49,7 @@ export const DEFAULT_CONFIG: Required<TgtbConfig> = Object.freeze({
  *
  * @example call API methods
  * ```ts
- * import tgtb from "@izzqz/tgtb";
+ * import tgtb, { TgtbConfig } from "@izzqz/tgtb";
  *
  * const options: TgtbConfig = {
  *   fetch_fn: globalThis.fetch,
@@ -63,23 +57,19 @@ export const DEFAULT_CONFIG: Required<TgtbConfig> = Object.freeze({
  *   use_test_mode: false
  * };
  *
+ * const bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+ *
  * const bot = tgtb(bot_token, options);
  *
  * bot; // TgtbClient
  *
  * // call a method
- * const res = await bot.callMethod("sendMessage", {
+ * const res = await bot.api.sendMessage({
  *   chat_id: 123456,
  *   text: "Hello, world!"
  * });
  *
  * res; // ApiResponse<SendMessage>
- * ```
- *
- * @example Validate data from webapp
- * ```ts
- * const initData = "";
- * bot.init_data.validate(initData); // true or Error
  * ```
  *
  * @param bot_token - Telegram bot token

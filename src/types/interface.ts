@@ -55,7 +55,9 @@ export interface Client<F = unknown> {
    * ```ts
    * import tgtb from "@izzqz/tgtb";
    *
-   * const bot = tgtb(bot_token, options);
+   * const bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+   *
+   * const bot = tgtb(bot_token);
    *
    * const res = await bot.api.sendMessage({
    *   chat_id: 123456,
@@ -78,7 +80,9 @@ export interface Client<F = unknown> {
    * ```ts
    * import tgtb from "@izzqz/tgtb";
    *
-   * const bot = tgtb(bot_token, options);
+   * const bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+   *
+   * const bot = tgtb(bot_token);
    *
    * const initData = "";
    *

@@ -3,7 +3,7 @@
  *
  * @example Get random init data string
  * ```ts
- * import { randomInitData } from "@izzqz/tgtb/test";
+ * import { randomInitData } from "@izzqz/tgtb/utils";
  *
  * const bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
  *
@@ -13,12 +13,12 @@
  * // this init data is valid and could be verified
  * import tgtb from "@izzqz/tgtb";
  *
- * tgtb(bot_token).isInitDataValid(initData); // true
+ * tgtb(bot_token).init_data.validate(initData); // true
  * ```
  *
  * @example Get random bot token
  * ```ts
- * import { randomBotToken } from "@izzqz/tgtb/test-utils";
+ * import { randomBotToken } from "@izzqz/tgtb/utils";
  *
  * const botToken = randomBotToken();
  * botToken: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
@@ -34,7 +34,7 @@ import { TOKEN_CHARS } from "../constants.ts";
  *
  * @example
  * ```ts
- * import { randomBotToken } from "@izzqz/tgtb/test";
+ * import { randomBotToken } from "@izzqz/tgtb/utils";
  * randomBotToken();
  * // "1542529915:AAG2lazAfktSdXzKacTXfzU2hmcg99POAZQ"
  *
@@ -61,7 +61,7 @@ export function randomBotToken(bot_id?: number): string {
  *
  * @example
  * ```ts
- * import { randomBotId } from "@izzqz/tgtb/test";
+ * import { randomBotId } from "@izzqz/tgtb/utils";
  *
  * randomBotId(); // 43496954931
  * ```
@@ -79,7 +79,7 @@ export function randomBotId(): number {
  *
  * @example
  * ```ts
- * import { randomBotUsername } from "@izzqz/tgtb/test";
+ * import { randomBotUsername } from "@izzqz/tgtb/utils";
  *
  * randomBotUsername(); // "tetris_bot"
  * ```
@@ -157,7 +157,7 @@ function buf2hex(buffer: ArrayBuffer): string {
  * @example
  * ```ts
  *
- * import { signInitData } from "@izzqz/tgtb/test";
+ * import { signInitData } from "@izzqz/tgtb/utils";
  *
  * const bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
  * const initData = await signInitData(bot_token, {
@@ -171,7 +171,7 @@ function buf2hex(buffer: ArrayBuffer): string {
  * // this init data is valid and could be verified
  * import tgtb from "@izzqz/tgtb";
  *
- * tgtb(bot_token).isInitDataValid(initData); // true
+ * tgtb(bot_token).init_data.validate(initData); // true
  * ```
  *
  * @param bot_token - The bot token to use for the signature
@@ -227,7 +227,7 @@ export async function signInitData(
  *
  * @example
  * ```ts
- * import { randomInitData } from "@izzqz/tgtb/test";
+ * import { randomInitData } from "@izzqz/tgtb/utils";
  *
  * const bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
  *
@@ -237,7 +237,7 @@ export async function signInitData(
  * // this init data is valid and could be verified
  * import tgtb from "@izzqz/tgtb";
  *
- * tgtb(bot_token).isInitDataValid(initData); // true
+ * tgtb(bot_token).init_data.validate(initData); // true
  * ```
  * @param bot_token - The bot token to use for signing
  */

@@ -4,7 +4,7 @@ default:
 # lint and type check
 lint:
     cargo clippy
-    deno check . --all
+    deno check . --all --doc
     deno lint
     deno fmt --check
 

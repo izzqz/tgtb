@@ -5,10 +5,5 @@
     "./types": "./src/types/telegram.ts",
     "./utils": "./src/utils/mod.ts",
     "./constants": "./src/constants.ts"
-  },
-  "tasks": {
-    "dev": "deno run --watch main.ts",
-    "bench": "deno bench benchmarks/",
-    "wasmbuild": "deno run -A jsr:@deno/wasmbuild@0.19"
   }
 }

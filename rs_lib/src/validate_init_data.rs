@@ -36,7 +36,6 @@ impl From<ValidationError> for JsError {
 
 const WEBAPPDATA: &[u8] = b"WebAppData";
 const CAPACITY: usize = 32;
-const DEFAULT_EXPIRATION: u64 = 86400; // 24 hours in seconds
 
 fn extract_hash(init_data: &str) -> Result<(&str, &str), ValidationError> {
   if init_data.is_empty() {
@@ -74,7 +73,7 @@ fn extract_hash(init_data: &str) -> Result<(&str, &str), ValidationError> {
 }
 
 #[wasm_bindgen]
-pub fn create_validator(bot_token: &str, expires_in: Option<u64>) -> Result<Function, JsError> {
+pub fn create_validator(bot_token: &str, expires_in: Option<u32>) -> Result<Function, JsError> {
   if bot_token.is_empty() {
     return Err(ValidationError::InvalidBotToken.into());
   }
@@ -83,7 +82,7 @@ pub fn create_validator(bot_token: &str, expires_in: Option<u64>) -> Result<Func
     .map_err(|e| ValidationError::ParseError(e.to_string()))?;
   secret.update(bot_token.as_bytes());
   let secret_key: [u8; 32] = secret.finalize().into_bytes().into();
-  let expires_in = expires_in.unwrap_or(DEFAULT_EXPIRATION);
+  let expires_in = expires_in.unwrap_or(0);
 
   let validate_fn = Closure::wrap(Box::new(move |init_data: String| -> bool {
     let result = (|| -> Result<bool, ValidationError> {
@@ -143,7 +142,7 @@ pub fn create_validator(bot_token: &str, expires_in: Option<u64>) -> Result<Func
         return Err(ValidationError::HashVerificationFailed);
       }
 
-      // Check expiration after hash verification
+      // Only check expiration if expires_in is greater than 0
       if expires_in > 0 {
         let auth_date = base_data
           .split('&')
@@ -154,10 +153,10 @@ pub fn create_validator(bot_token: &str, expires_in: Option<u64>) -> Result<Func
           .ok_or_else(|| ValidationError::InvalidQueryString("malformed auth_date".into()))?;
 
         let auth_timestamp = auth_date
-          .parse::<u64>()
+          .parse::<u32>()
           .map_err(|e| ValidationError::ParseError(e.to_string()))?;
 
-        let now = js_sys::Date::now() as u64 / 1000; // Convert milliseconds to seconds
+        let now = (js_sys::Date::now() as u64 / 1000) as u32; // Convert milliseconds to seconds
         if auth_timestamp + expires_in < now {
           return Err(ValidationError::Expired);
         }

@@ -14,13 +14,17 @@ fmt:
     cargo clippy --fix
     deno fmt
 
+# build rust
+wasmbuild:
+    deno run -A jsr:@deno/wasmbuild@0.19
+
 # test wasm in different browsers
 [working-directory: 'rs_lib']
 test-wasm:
     wasm-pack test --node
 
 test:
-    deno test --trace-leaks --check --parallel --reporter=pretty
+    deno test --trace-leaks --check --parallel --reporter=dot
 
 test-coverage:
     deno test --coverage --parallel --reporter=dot

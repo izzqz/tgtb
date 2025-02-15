@@ -31,7 +31,7 @@ test:
 test-coverage:
     @rm -rf coverage
     deno test --coverage --parallel --reporter=dot
-    deno coverage --include=src --detailed --html
+    deno coverage --include=src --detailed
 
 # build tsdoc documentation
 build-doc:

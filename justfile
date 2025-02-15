@@ -18,18 +18,21 @@ fmt:
 wasmbuild:
     deno run -A jsr:@deno/wasmbuild@0.19
 
-# test wasm in different browsers
+# test wasm
 [working-directory: 'rs_lib']
 test-wasm:
     wasm-pack test --node
 
+# run tests for deno
 test:
     deno test --trace-leaks --check --parallel --reporter=dot
 
+# generate coverage report
 test-coverage:
     @rm -rf coverage
     deno test --coverage --parallel --reporter=dot
-    deno coverage --include=src --detailed
+    deno coverage --include=src --detailed --html
 
+# build tsdoc documentation
 build-doc:
     deno doc --html --name="@izzqz/tgtb" src

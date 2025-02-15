@@ -9,7 +9,7 @@ import type {
 
 /**
  * Build a function to call a method
- * 
+ *
  * @ignore
  * @internal
  * @param bot_token - Telegram bot token
@@ -49,7 +49,7 @@ export function buildCallMethod(
 
 /**
  * Build a proxy to call Telegram API methods
- * 
+ *
  * @ignore
  * @internal
  * @param bot_token - Telegram bot token
@@ -66,6 +66,6 @@ export default function buildAPICaller<F>(
       return async (params?: Opts<F>[keyof ApiMethods<F>]) => {
         return await callMethod(prop as BotMethodKeys<F>, params);
       };
-    }
+    },
   }) as TelegramAPI<F>;
 }

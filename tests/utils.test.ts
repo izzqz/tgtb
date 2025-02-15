@@ -14,12 +14,12 @@ import {
 } from "jsr:@std/testing/mock";
 
 import {
+  createSecret,
   randomBotId,
   randomBotToken,
   randomBotUsername,
   randomInitData,
   signInitData,
-  createSecret,
 } from "@izzqz/tgtb/utils";
 import tgtb from "@izzqz/tgtb";
 
@@ -755,9 +755,21 @@ Deno.test("createSecret", async (t) => {
     const secret2 = createSecret();
     const secret3 = createSecret();
 
-    assertNotEquals(secret1, secret2, "Consecutive secrets should be different");
-    assertNotEquals(secret2, secret3, "Consecutive secrets should be different");
-    assertNotEquals(secret1, secret3, "Consecutive secrets should be different");
+    assertNotEquals(
+      secret1,
+      secret2,
+      "Consecutive secrets should be different",
+    );
+    assertNotEquals(
+      secret2,
+      secret3,
+      "Consecutive secrets should be different",
+    );
+    assertNotEquals(
+      secret1,
+      secret3,
+      "Consecutive secrets should be different",
+    );
   });
 
   await t.step("should use cryptographically secure random values", () => {
@@ -769,7 +781,7 @@ Deno.test("createSecret", async (t) => {
     );
 
     const secret = createSecret(3);
-    
+
     assertSpyCall(randomStub, 0, {
       args: [new Uint8Array(3)],
       returned: mockValues,

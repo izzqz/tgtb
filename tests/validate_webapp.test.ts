@@ -209,7 +209,7 @@ Deno.test("validate_webapp", async (t) => {
   });
 
   await t.step("expiration tests", async (t) => {
-    using time = new FakeTime(1707000000000); // Set initial time to a known value
+    using time = new FakeTime(1707000000000);// Set initial time to a known value
     const user = {
       id: 123456789,
       first_name: "Test",
@@ -217,31 +217,34 @@ Deno.test("validate_webapp", async (t) => {
       username: "testuser",
     };
 
-    await t.step("should accept non-expired data with expiration set", async () => {
-      const auth_date = Math.floor(time.now / 1000); // Current time in seconds
-      const initData = await signInitData(BOT_TOKEN, {
-        user,
-        query_id: "test123",
-        auth_date,
-      });
+    await t.step(
+      "should accept non-expired data with expiration set",
+      async () => {
+        const auth_date = Math.floor(time.now / 1000); // Current time in seconds
+        const initData = await signInitData(BOT_TOKEN, {
+          user,
+          query_id: "test123",
+          auth_date,
+        });
 
-      const client = tgtb(BOT_TOKEN, { init_data_expiration: 3600 }); // 1 hour expiration
-      
-      // Check immediately - should be valid
-      assertEquals(client.init_data.isValid(initData), true);
-      
-      // Move forward 30 minutes - should still be valid
-      time.tick(1800 * 1000);
-      assertEquals(client.init_data.isValid(initData), true);
-      
-      // Move forward another 31 minutes (total 61 minutes) - should be expired
-      time.tick(1860 * 1000);
-      assertThrows(
-        () => client.init_data.validate(initData),
-        Error,
-        "Data has expired",
-      );
-    });
+        const client = tgtb(BOT_TOKEN, { init_data_expiration: 3600 }); // 1 hour expiration
+
+        // Check immediately - should be valid
+        assertEquals(client.init_data.isValid(initData), true);
+
+        // Move forward 30 minutes - should still be valid
+        time.tick(1800 * 1000);
+        assertEquals(client.init_data.isValid(initData), true);
+
+        // Move forward another 31 minutes (total 61 minutes) - should be expired
+        time.tick(1860 * 1000);
+        assertThrows(
+          () => client.init_data.validate(initData),
+          Error,
+          "Data has expired",
+        );
+      },
+    );
 
     await t.step("should not expire when expires_in is 0", async () => {
       const auth_date = Math.floor(time.now / 1000);
@@ -252,10 +255,10 @@ Deno.test("validate_webapp", async (t) => {
       });
 
       const client = tgtb(BOT_TOKEN, { init_data_expiration: 0 });
-      
+
       // Check immediately
       assertEquals(client.init_data.isValid(initData), true);
-      
+
       // Move forward 1 year
       time.tick(365 * 24 * 60 * 60 * 1000);
       assertEquals(client.init_data.isValid(initData), true);
@@ -270,10 +273,10 @@ Deno.test("validate_webapp", async (t) => {
       });
 
       const client = tgtb(BOT_TOKEN, { init_data_expiration: null });
-      
+
       // Check immediately
       assertEquals(client.init_data.isValid(initData), true);
-      
+
       // Move forward 1 year
       time.tick(365 * 24 * 60 * 60 * 1000);
       assertEquals(client.init_data.isValid(initData), true);
@@ -288,10 +291,10 @@ Deno.test("validate_webapp", async (t) => {
       });
 
       const client = tgtb(BOT_TOKEN); // No expires_in provided
-      
+
       // Check immediately
       assertEquals(client.init_data.isValid(initData), true);
-      
+
       // Move forward 1 year
       time.tick(365 * 24 * 60 * 60 * 1000);
       assertEquals(client.init_data.isValid(initData), true);
@@ -306,14 +309,14 @@ Deno.test("validate_webapp", async (t) => {
       });
 
       const client = tgtb(BOT_TOKEN, { init_data_expiration: 60 }); // 60 seconds expiration
-      
+
       // Initial check - should be valid
       assertEquals(client.init_data.isValid(initData), true);
-      
+
       // Move to 59 seconds - should still be valid
       time.tick(59 * 1000);
       assertEquals(client.init_data.isValid(initData), true);
-      
+
       // Move to exactly 60 seconds - should be expired
       time.tick(1000);
       assertThrows(

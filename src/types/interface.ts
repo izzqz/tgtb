@@ -38,7 +38,7 @@ export type BotMethodResponse<F, M extends BotMethodKeys<F>> = Promise<
  */
 export type TelegramAPI<F> = {
   [M in keyof ApiMethods<F>]: (
-    params?: Opts<F>[M]
+    params?: Opts<F>[M],
   ) => Promise<ApiResponse<ReturnType<ApiMethods<F>[M]>>>;
 };
 
@@ -48,20 +48,20 @@ export type TelegramAPI<F> = {
 export interface Client<F = unknown> {
   /**
    * Direct access to Telegram API methods
-   * 
+   *
    * For every method see [Telegram Bot API](https://core.telegram.org/bots/api)
-   * 
+   *
    * @example
    * ```ts
    * import tgtb from "@izzqz/tgtb";
-   * 
+   *
    * const bot = tgtb(bot_token, options);
-   * 
+   *
    * const res = await bot.api.sendMessage({
    *   chat_id: 123456,
    *   text: "Hello, world!"
    * });
-   * 
+   *
    * if (res.ok) {
    *   console.log(res.result); // { message_id: 123456 }
    * } else {
@@ -73,18 +73,18 @@ export interface Client<F = unknown> {
 
   /**
    * Methods to validate data from webapp
-   * 
+   *
    * @example
    * ```ts
    * import tgtb from "@izzqz/tgtb";
-   * 
+   *
    * const bot = tgtb(bot_token, options);
-   * 
+   *
    * const initData = "";
-   * 
+   *
    * // this method return boolean
    * bot.init_data.isValid(initData); // boolean
-   * 
+   *
    * // this method throw error with message if invalid
    * bot.init_data.validate(initData); // true or Error
    * ```
@@ -98,7 +98,7 @@ export interface Client<F = unknown> {
      * Validate data from webapp and trow if not valid
      */
     validate: (init_data: string) => true | Error;
-  }
+  };
 }
 
 /**
@@ -107,7 +107,7 @@ export interface Client<F = unknown> {
 export interface TgtbConfig {
   /**
    * Fetch function to use for api requests
-   * 
+   *
    * @default globalThis.fetch
    */
   fetch_fn?: typeof fetch;

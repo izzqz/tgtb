@@ -5,7 +5,7 @@ import { beforeEach, describe, it } from "jsr:@std/testing/bdd";
 import tgtb from "@izzqz/tgtb";
 import type { ApiError } from "@izzqz/tgtb/types";
 
-describe("callMethod", () => {
+describe("api", () => {
   const BOT_TOKEN = "test_token";
   const DEFAULT_BASE_URL = "https://api.telegram.org/bot";
   let mockFetch: typeof fetch;
@@ -33,7 +33,7 @@ describe("callMethod", () => {
     };
 
     client = tgtb(BOT_TOKEN, { fetch_fn: mockFetch });
-    await client.callMethod("getMe");
+    await client.api.getMe();
 
     assertEquals(
       capturedUrl,
@@ -50,7 +50,7 @@ describe("callMethod", () => {
     };
 
     client = tgtb(BOT_TOKEN, { fetch_fn: mockFetch });
-    await client.callMethod("sendMessage", {
+    await client.api.sendMessage({
       chat_id: 123456,
       text: "test message",
     });
@@ -73,7 +73,7 @@ describe("callMethod", () => {
     };
 
     client = tgtb(BOT_TOKEN, { fetch_fn: mockFetch });
-    await client.callMethod("sendMessage", {
+    await client.api.sendMessage({
       chat_id: 123456,
       text: "test message",
       reply_markup: complexObject,
@@ -99,7 +99,7 @@ describe("callMethod", () => {
       fetch_fn: mockFetch,
       base_url: customBaseUrl,
     });
-    await client.callMethod("getMe");
+    await client.api.getMe();
 
     assertEquals(
       capturedUrl,
@@ -130,7 +130,7 @@ describe("callMethod", () => {
     };
 
     client = tgtb(BOT_TOKEN, { fetch_fn: mockFetch });
-    const response = await client.callMethod("getMe");
+    const response = await client.api.getMe();
 
     assertEquals(response, expectedResponse);
   });
@@ -147,7 +147,7 @@ describe("callMethod", () => {
     };
 
     client = tgtb(BOT_TOKEN, { fetch_fn: mockFetch });
-    const response = await client.callMethod("getMe") as ApiError;
+    const response = await client.api.getMe() as ApiError;
 
     assertEquals(response.ok, false);
     assertEquals(response.error_code, 404);
@@ -163,7 +163,7 @@ describe("callMethod", () => {
 
     await assertRejects(
       async () => {
-        await client.callMethod("getMe");
+        await client.api.getMe();
       },
       Error,
       "Network error",
@@ -179,7 +179,7 @@ describe("callMethod", () => {
     };
 
     client = tgtb(BOT_TOKEN, { fetch_fn: mockFetch });
-    await client.callMethod("sendMessage", {
+    await client.api.sendMessage({
       chat_id: 123456,
       text: "test message",
       reply_to_message_id: undefined,
@@ -198,7 +198,7 @@ describe("callMethod", () => {
     };
 
     client = tgtb(BOT_TOKEN, { fetch_fn: mockFetch });
-    await client.callMethod("getMe");
+    await client.api.getMe();
 
     const url = new URL(capturedUrl!);
     assertEquals(Array.from(url.searchParams.entries()).length, 0);
@@ -213,7 +213,7 @@ describe("callMethod", () => {
     };
 
     client = tgtb(BOT_TOKEN, { fetch_fn: mockFetch });
-    await client.callMethod("sendMessage", {
+    await client.api.sendMessage({
       chat_id: 123456,
       text: "test message",
       disable_notification: false,
@@ -232,7 +232,7 @@ describe("callMethod", () => {
     };
 
     client = tgtb(BOT_TOKEN, { fetch_fn: mockFetch });
-    await client.callMethod("sendMessage", {
+    await client.api.sendMessage({
       chat_id: 123456,
       text: "test message",
       disable_notification: false,
@@ -277,7 +277,7 @@ describe("callMethod", () => {
     };
 
     client = tgtb(BOT_TOKEN, { fetch_fn: mockFetch });
-    const response = await client.callMethod("sendMessage", {
+    const response = await client.api.sendMessage({
       chat_id: 789,
       text: "Test message",
     });

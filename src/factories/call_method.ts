@@ -3,8 +3,9 @@ import type {
   ApiResponse,
   BotMethodKeys,
   Opts,
+  TelegramAPI,
   TgtbConfig,
-} from "../types/api.ts";
+} from "../types/interface.ts";
 
 /**
  * Build a function to call a method
@@ -12,14 +13,14 @@ import type {
  * @ignore
  * @internal
  * @param bot_token - Telegram bot token
- * @param options - tgtb options
+ * @param config - tgtb options
  * @returns a function to call a method
  */
-export default function buildCallMethod(
+export function buildCallMethod(
   bot_token: string,
-  options: TgtbConfig,
+  config: TgtbConfig,
 ) {
-  const { fetch_fn, base_url } = options as Required<TgtbConfig>;
+  const { fetch_fn, base_url } = config as Required<TgtbConfig>;
   return async <M extends BotMethodKeys<F>, F = unknown>(
     method: M,
     params?: Opts<F>[M],
@@ -44,4 +45,27 @@ export default function buildCallMethod(
 
     return result;
   };
+}
+
+/**
+ * Build a proxy to call Telegram API methods
+ * 
+ * @ignore
+ * @internal
+ * @param bot_token - Telegram bot token
+ * @param config - tgtb options
+ * @returns Proxy object to call Telegram API methods
+ */
+export default function buildAPICaller<F>(
+  bot_token: string,
+  config: TgtbConfig,
+): TelegramAPI<F> {
+  const callMethod = buildCallMethod(bot_token, config);
+  return new Proxy({}, {
+    get(_target, prop) {
+      return async (params?: Opts<F>[keyof ApiMethods<F>]) => {
+        return await callMethod(prop as BotMethodKeys<F>, params);
+      };
+    }
+  }) as TelegramAPI<F>;
 }

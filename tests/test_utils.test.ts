@@ -337,7 +337,7 @@ Deno.test("randomInitData", async (t) => {
       assertMatch(hash, /^[a-f0-9]{64}$/);
 
       assert(
-        tgtb(botToken).isInitDataValid(initData),
+        tgtb(botToken).init_data.isValid(initData),
         "Init data should be valid",
       );
     },
@@ -395,11 +395,11 @@ Deno.test("randomInitData", async (t) => {
     assertSpyCalls(arrayElementStub, 2);
     assertSpyCalls(booleanStub, 2);
     assert(
-      tgtb(botToken).isInitDataValid(initData1),
+      tgtb(botToken).init_data.isValid(initData1),
       "Init data should be valid",
     );
     assert(
-      tgtb(botToken).isInitDataValid(initData2),
+      tgtb(botToken).init_data.isValid(initData2),
       "Init data should be valid",
     );
   });
@@ -445,7 +445,7 @@ Deno.test("randomInitData", async (t) => {
     const initData = await randomInitData(botToken);
 
     assert(
-      tgtb(botToken).isInitDataValid(initData),
+      tgtb(botToken).init_data.isValid(initData),
       "Init data should be valid",
     );
 
@@ -497,7 +497,7 @@ Deno.test("randomInitData", async (t) => {
     const expectedBotToken = "123456789:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
     assert(
-      tgtb(expectedBotToken).isInitDataValid(initData),
+      tgtb(expectedBotToken).init_data.isValid(initData),
       "Init data should be valid with auto-generated bot token",
     );
   });
@@ -540,7 +540,7 @@ Deno.test("signInitData", async (t) => {
 
     // Verify the data is valid
     assert(
-      tgtb(botToken).isInitDataValid(initData),
+      tgtb(botToken).init_data.isValid(initData),
       "Init data should be valid",
     );
   });
@@ -564,7 +564,7 @@ Deno.test("signInitData", async (t) => {
 
     // Verify the data is valid
     assert(
-      tgtb(botToken).isInitDataValid(initData),
+      tgtb(botToken).init_data.isValid(initData),
       "Init data should be valid",
     );
 
@@ -647,7 +647,7 @@ Deno.test("signInitData", async (t) => {
 
     // Verify the data is valid
     assert(
-      tgtb(botToken).isInitDataValid(initData),
+      tgtb(botToken).init_data.isValid(initData),
       "Init data should be valid",
     );
 
@@ -676,7 +676,7 @@ Deno.test("signInitData", async (t) => {
 
     // Verify the data is valid
     assert(
-      tgtb(botToken).isInitDataValid(initData),
+      tgtb(botToken).init_data.isValid(initData),
       "Init data should be valid",
     );
 

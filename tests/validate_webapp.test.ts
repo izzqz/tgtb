@@ -11,7 +11,7 @@ Deno.test("validate_webapp", async (t) => {
 
   await t.step("should validate real-world valid init data", () => {
     const validClient = tgtb(VALID_BOT_TOKEN);
-    const result = validClient.isInitDataValid(VALID_INIT_DATA);
+    const result = validClient.init_data.isValid(VALID_INIT_DATA);
     assertEquals(result, true);
   });
 
@@ -25,7 +25,7 @@ Deno.test("validate_webapp", async (t) => {
 
   await t.step("should reject empty init data", () => {
     assertThrows(
-      () => client.isInitDataValid(""),
+      () => client.init_data.validate(""),
       Error,
       "init_data is empty",
     );
@@ -36,7 +36,7 @@ Deno.test("validate_webapp", async (t) => {
       "query_id=AAHdF6IQAAAAAN0XohDhrOrc&user=%7B%22id%22%3A1234567890%7D&auth_date=1234567890";
 
     assertThrows(
-      () => client.isInitDataValid(initData),
+      () => client.init_data.validate(initData),
       Error,
       "hash field not found",
     );
@@ -46,7 +46,7 @@ Deno.test("validate_webapp", async (t) => {
     const initData = "query_id=test&hash=";
 
     assertThrows(
-      () => client.isInitDataValid(initData),
+      () => client.init_data.validate(initData),
       Error,
       "hash is empty",
     );
@@ -56,7 +56,7 @@ Deno.test("validate_webapp", async (t) => {
     const initData = "query_id=test&hash=xyz123";
 
     assertThrows(
-      () => client.isInitDataValid(initData),
+      () => client.init_data.validate(initData),
       Error,
       "hash contains non-hex characters",
     );
@@ -66,7 +66,7 @@ Deno.test("validate_webapp", async (t) => {
     const initData = "query_id=test&hash=abc123";
 
     assertThrows(
-      () => client.isInitDataValid(initData),
+      () => client.init_data.validate(initData),
       Error,
       "hash length is 6, expected 64",
     );
@@ -76,7 +76,7 @@ Deno.test("validate_webapp", async (t) => {
     const initData = "query_id&user=test&hash=" + "a".repeat(64);
 
     assertThrows(
-      () => client.isInitDataValid(initData),
+      () => client.init_data.validate(initData),
       Error,
       "malformed query pair",
     );
@@ -86,7 +86,7 @@ Deno.test("validate_webapp", async (t) => {
     const initData = "query_id=test&user=%invalid%&hash=" + "0".repeat(64);
 
     assertThrows(
-      () => client.isInitDataValid(initData),
+      () => client.init_data.validate(initData),
       Error,
       "Hash verification failed",
     );
@@ -96,7 +96,7 @@ Deno.test("validate_webapp", async (t) => {
     const initData = "query_id=test&user=test&hash=" + "0".repeat(64);
 
     assertThrows(
-      () => client.isInitDataValid(initData),
+      () => client.init_data.validate(initData),
       Error,
       "Hash verification failed",
     );
@@ -114,7 +114,7 @@ Deno.test("validate_webapp", async (t) => {
     }&hash=${"0".repeat(64)}`;
 
     assertThrows(
-      () => client.isInitDataValid(initData),
+      () => client.init_data.validate(initData),
       Error,
       "Hash verification failed",
     );
@@ -130,7 +130,7 @@ Deno.test("validate_webapp", async (t) => {
       "&hash=" + "0".repeat(64);
 
     assertThrows(
-      () => client.isInitDataValid(initData),
+      () => client.init_data.validate(initData),
       Error,
       "Hash verification failed",
     );
@@ -140,7 +140,7 @@ Deno.test("validate_webapp", async (t) => {
     const initData = `hash=${"0".repeat(64)}&auth_date=123`;
 
     assertThrows(
-      () => client.isInitDataValid(initData),
+      () => client.init_data.validate(initData),
       Error,
       "hash field not found",
     );
@@ -150,7 +150,7 @@ Deno.test("validate_webapp", async (t) => {
     const initData = `auth_date=123&hash=${"0".repeat(64)}&foo=bar`;
 
     assertThrows(
-      () => client.isInitDataValid(initData),
+      () => client.init_data.validate(initData),
       Error,
       "Invalid hash format: hash contains non-hex characters",
     );
@@ -160,7 +160,7 @@ Deno.test("validate_webapp", async (t) => {
     const initData = `B=2&a=1&hash=${"0".repeat(64)}`;
 
     assertThrows(
-      () => client.isInitDataValid(initData),
+      () => client.init_data.validate(initData),
       Error,
       "Hash verification failed",
     );
@@ -170,7 +170,7 @@ Deno.test("validate_webapp", async (t) => {
     const initData = `key%3D=value%26&hash=${"0".repeat(64)}`;
 
     assertThrows(
-      () => client.isInitDataValid(initData),
+      () => client.init_data.validate(initData),
       Error,
       "Hash verification failed",
     );
@@ -180,7 +180,7 @@ Deno.test("validate_webapp", async (t) => {
     const initData = `=value&key=&hash=${"0".repeat(64)}`;
 
     assertThrows(
-      () => client.isInitDataValid(initData),
+      () => client.init_data.validate(initData),
       Error,
       "Hash verification failed",
     );
@@ -190,7 +190,7 @@ Deno.test("validate_webapp", async (t) => {
     const initData = `key=val=ue&hash=${"0".repeat(64)}`;
 
     assertThrows(
-      () => client.isInitDataValid(initData),
+      () => client.init_data.validate(initData),
       Error,
       "Hash verification failed",
     );
@@ -200,7 +200,7 @@ Deno.test("validate_webapp", async (t) => {
     const initData = `hash=invalid&hash=${"0".repeat(64)}`;
 
     assertThrows(
-      () => client.isInitDataValid(initData),
+      () => client.init_data.validate(initData),
       Error,
       "Hash verification failed",
     );

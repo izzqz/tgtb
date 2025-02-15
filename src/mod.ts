@@ -36,15 +36,15 @@
  * @module
  */
 
-import buildCallMethod from "./factories/call_method.ts";
-import type { TgtbClient, TgtbConfig } from "./types/api.ts";
-import createValidateWebapp from "./factories/validate_webapp.ts";
+import type { Client, TgtbConfig } from "./types/interface.ts";
+import buildInitDataTools from "./factories/validate_webapp.ts";
+import buildAPICaller from "./factories/call_method.ts";
 
 /**
  * Default options for the TgtbClient
  * @internal
  */
-export const DEFAULT_OPTIONS: TgtbConfig = Object.freeze({
+export const DEFAULT_CONFIG: TgtbConfig = Object.freeze({
   fetch_fn: globalThis.fetch,
   base_url: "https://api.telegram.org/bot",
   use_test_mode: false
@@ -79,7 +79,7 @@ export const DEFAULT_OPTIONS: TgtbConfig = Object.freeze({
  * @example Validate data from webapp
  * ```ts
  * const initData = "";
- * bot.isInitDataValid(initData); // true or Error
+ * bot.init_data.validate(initData); // true or Error
  * ```
  * 
  * @param bot_token - Telegram bot token
@@ -89,15 +89,15 @@ export const DEFAULT_OPTIONS: TgtbConfig = Object.freeze({
 export default function tgtb(
   bot_token: string,
   config?: TgtbConfig,
-): TgtbClient {
-  const mergedOptions: TgtbConfig = {
-    ...DEFAULT_OPTIONS,
+): Client {
+  const mergedConfig: TgtbConfig = {
+    ...DEFAULT_CONFIG,
     ...config,
   };
   return {
-    callMethod: buildCallMethod(bot_token, mergedOptions),
-    isInitDataValid: createValidateWebapp(bot_token),
+    api: buildAPICaller(bot_token, mergedConfig),
+    init_data: buildInitDataTools(bot_token, mergedConfig),
   };
 }
 
-export type * from "./types/api.ts";
+export type * from "./types/interface.ts";

@@ -32,13 +32,22 @@ export type BotMethodResponse<F, M extends BotMethodKeys<F>> = Promise<
   ApiResponse<ReturnType<ApiMethods<F>[M]>>
 >;
 
+/**
+ * Type that converts all API methods to return Promises with ApiResponse
+ * @internal
+ */
+export type TelegramAPI<F> = {
+  [M in keyof ApiMethods<F>]: (
+    params?: Opts<F>[M]
+  ) => Promise<ApiResponse<ReturnType<ApiMethods<F>[M]>>>;
+};
 
 /**
- * tgtb client with
+ * tgtb client
  */
-export interface TgtbClient<F = unknown> {
+export interface Client<F = unknown> {
   /**
-   * Call bot API methods
+   * Direct access to Telegram API methods
    * 
    * For every method see [Telegram Bot API](https://core.telegram.org/bots/api)
    * 
@@ -48,7 +57,7 @@ export interface TgtbClient<F = unknown> {
    * 
    * const bot = tgtb(bot_token, options);
    * 
-   * const res = await bot.callMethod("sendMessage", {
+   * const res = await bot.api.sendMessage({
    *   chat_id: 123456,
    *   text: "Hello, world!"
    * });
@@ -60,13 +69,10 @@ export interface TgtbClient<F = unknown> {
    * }
    * ```
    */
-  callMethod: <M extends BotMethodKeys<F>>(
-    method: M,
-    params?: Opts<F>[M]
-  ) => BotMethodResponse<F, M>;
+  api: TelegramAPI<F>;
 
   /**
-   * Validate data from webapp
+   * Methods to validate data from webapp
    * 
    * @example
    * ```ts
@@ -75,10 +81,24 @@ export interface TgtbClient<F = unknown> {
    * const bot = tgtb(bot_token, options);
    * 
    * const initData = "";
-   * bot.isInitDataValid(initData); // true or Error
+   * 
+   * // this method return boolean
+   * bot.init_data.isValid(initData); // boolean
+   * 
+   * // this method throw error with message if invalid
+   * bot.init_data.validate(initData); // true or Error
    * ```
    */
-  isInitDataValid: (init_data: string) => true | Error;
+  init_data: {
+    /**
+     * Validate data from webapp and return boolean
+     */
+    isValid: (init_data: string) => boolean;
+    /**
+     * Validate data from webapp and trow if not valid
+     */
+    validate: (init_data: string) => true | Error;
+  }
 }
 
 /**

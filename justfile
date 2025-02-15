@@ -36,3 +36,7 @@ test-coverage:
 # build tsdoc documentation
 build-doc:
     deno doc --html --name="@izzqz/tgtb" src
+
+get-types-versions:
+    GH_PAGER= gh api repos/grammyjs/types/tags --jq '.[0].name'
+    GH_PAGER= gh api repos/DavisDmitry/telegram-webapps/tags --jq '.[0].name'

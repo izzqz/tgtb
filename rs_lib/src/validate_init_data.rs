@@ -24,6 +24,8 @@ pub enum ValidationError {
   HashVerificationFailed,
   #[error("Invalid bot token")]
   InvalidBotToken,
+  #[error("Data has expired")]
+  Expired,
 }
 
 impl From<ValidationError> for JsError {
@@ -34,6 +36,7 @@ impl From<ValidationError> for JsError {
 
 const WEBAPPDATA: &[u8] = b"WebAppData";
 const CAPACITY: usize = 32;
+const DEFAULT_EXPIRATION: u64 = 86400; // 24 hours in seconds
 
 fn extract_hash(init_data: &str) -> Result<(&str, &str), ValidationError> {
   if init_data.is_empty() {
@@ -71,7 +74,7 @@ fn extract_hash(init_data: &str) -> Result<(&str, &str), ValidationError> {
 }
 
 #[wasm_bindgen]
-pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
+pub fn create_validator(bot_token: &str, expires_in: Option<u64>) -> Result<Function, JsError> {
   if bot_token.is_empty() {
     return Err(ValidationError::InvalidBotToken.into());
   }
@@ -80,6 +83,7 @@ pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
     .map_err(|e| ValidationError::ParseError(e.to_string()))?;
   secret.update(bot_token.as_bytes());
   let secret_key: [u8; 32] = secret.finalize().into_bytes().into();
+  let expires_in = expires_in.unwrap_or(DEFAULT_EXPIRATION);
 
   let validate_fn = Closure::wrap(Box::new(move |init_data: String| -> bool {
     let result = (|| -> Result<bool, ValidationError> {
@@ -139,6 +143,26 @@ pub fn create_validator(bot_token: &str) -> Result<Function, JsError> {
         return Err(ValidationError::HashVerificationFailed);
       }
 
+      // Check expiration after hash verification
+      if expires_in > 0 {
+        let auth_date = base_data
+          .split('&')
+          .find(|pair| pair.starts_with("auth_date="))
+          .ok_or_else(|| ValidationError::MissingField("auth_date field not found".into()))?
+          .split_once('=')
+          .map(|(_, v)| v)
+          .ok_or_else(|| ValidationError::InvalidQueryString("malformed auth_date".into()))?;
+
+        let auth_timestamp = auth_date
+          .parse::<u64>()
+          .map_err(|e| ValidationError::ParseError(e.to_string()))?;
+
+        let now = js_sys::Date::now() as u64 / 1000; // Convert milliseconds to seconds
+        if auth_timestamp + expires_in < now {
+          return Err(ValidationError::Expired);
+        }
+      }
+
       Ok(true)
     })();
 
@@ -167,7 +191,7 @@ mod tests {
 
   #[wasm_bindgen_test]
   fn test_real_world_valid_init_data() {
-    let validate = create_validator(VALID_BOT_TOKEN).unwrap();
+    let validate = create_validator(VALID_BOT_TOKEN, Some(0)).unwrap(); // Disable expiration for this test
     let result = validate
       .call1(&JsValue::NULL, &JsValue::from_str(VALID_INIT_DATA))
       .unwrap();
@@ -176,14 +200,14 @@ mod tests {
 
   #[wasm_bindgen_test]
   fn test_reject_empty_bot_token() {
-    let result = create_validator("");
+    let result = create_validator("", None);
     assert!(result.is_err());
     assert_eq!(result.unwrap_err().to_string(), "Error: Invalid bot token");
   }
 
   #[wasm_bindgen_test]
   fn test_reject_empty_init_data() {
-    let validate = create_validator(BOT_TOKEN).unwrap();
+    let validate = create_validator(BOT_TOKEN, None).unwrap();
     let result = validate.call1(&JsValue::NULL, &JsValue::from_str(""));
     assert!(result.is_err());
     assert_eq!(get_error_message(result.unwrap_err()), "init_data is empty");
@@ -191,7 +215,7 @@ mod tests {
 
   #[wasm_bindgen_test]
   fn test_reject_missing_hash_field() {
-    let validate = create_validator(BOT_TOKEN).unwrap();
+    let validate = create_validator(BOT_TOKEN, None).unwrap();
     let init_data = "query_id=AAHdF6IQAAAAAN0XohDhrOrc&user=%7B%22id%22%3A1234567890%7D&auth_date=1234567890";
     let result = validate.call1(&JsValue::NULL, &JsValue::from_str(init_data));
     assert!(result.is_err());
@@ -200,7 +224,7 @@ mod tests {
 
   #[wasm_bindgen_test]
   fn test_reject_empty_hash() {
-    let validate = create_validator(BOT_TOKEN).unwrap();
+    let validate = create_validator(BOT_TOKEN, None).unwrap();
     let init_data = "query_id=test&hash=";
     let result = validate.call1(&JsValue::NULL, &JsValue::from_str(init_data));
     assert!(result.is_err());
@@ -209,7 +233,7 @@ mod tests {
 
   #[wasm_bindgen_test]
   fn test_reject_non_hex_hash_characters() {
-    let validate = create_validator(BOT_TOKEN).unwrap();
+    let validate = create_validator(BOT_TOKEN, None).unwrap();
     let init_data = "query_id=test&hash=xyz123";
     let result = validate.call1(&JsValue::NULL, &JsValue::from_str(init_data));
     assert!(result.is_err());
@@ -218,7 +242,7 @@ mod tests {
 
   #[wasm_bindgen_test]
   fn test_reject_incorrect_hash_length() {
-    let validate = create_validator(BOT_TOKEN).unwrap();
+    let validate = create_validator(BOT_TOKEN, None).unwrap();
     let init_data = "query_id=test&hash=abc123";
     let result = validate.call1(&JsValue::NULL, &JsValue::from_str(init_data));
     assert!(result.is_err());
@@ -227,8 +251,8 @@ mod tests {
 
   #[wasm_bindgen_test]
   fn test_reject_malformed_query_pair() {
-    let validate = create_validator(BOT_TOKEN).unwrap();
-    let init_data = format!("query_id&user=test&hash={}", "a".repeat(64));
+    let validate = create_validator(BOT_TOKEN, None).unwrap();
+    let init_data = format!("query_id&user=test&auth_date=123&hash={}", "a".repeat(64));
     let result = validate.call1(&JsValue::NULL, &JsValue::from_str(&init_data));
     assert!(result.is_err());
     assert_eq!(get_error_message(result.unwrap_err()), "Invalid query string: malformed query pair");
@@ -236,16 +260,16 @@ mod tests {
 
   #[wasm_bindgen_test]
   fn test_reject_invalid_url_encoding() {
-    let validate = create_validator(BOT_TOKEN).unwrap();
-    let init_data = format!("query_id=test&user=%invalid%&hash={}", "0".repeat(64));
+    let validate = create_validator(BOT_TOKEN, None).unwrap();
+    let init_data = format!("query_id=test&user=%invalid%&auth_date=123&hash={}", "0".repeat(64));
     let result = validate.call1(&JsValue::NULL, &JsValue::from_str(&init_data));
     assert!(result.is_err());
   }
 
   #[wasm_bindgen_test]
   fn test_reject_hash_verification_failure() {
-    let validate = create_validator(BOT_TOKEN).unwrap();
-    let init_data = format!("query_id=test&user=test&hash={}", "0".repeat(64));
+    let validate = create_validator(BOT_TOKEN, None).unwrap();
+    let init_data = format!("query_id=test&user=test&auth_date=123&hash={}", "0".repeat(64));
     let result = validate.call1(&JsValue::NULL, &JsValue::from_str(&init_data));
     assert!(result.is_err());
     assert_eq!(get_error_message(result.unwrap_err()), "Hash verification failed");
@@ -253,7 +277,7 @@ mod tests {
 
   #[wasm_bindgen_test]
   fn test_handle_large_input_data() {
-    let validate = create_validator(BOT_TOKEN).unwrap();
+    let validate = create_validator(BOT_TOKEN, None).unwrap();
     let large_user = format!(
       "{{\"id\":123456789,\"first_name\":\"{}\",\"last_name\":\"{}\",\"username\":\"{}\"}}",
       "A".repeat(1000),
@@ -261,7 +285,7 @@ mod tests {
       "C".repeat(100)
     );
     let init_data = format!(
-      "query_id=test&user={}&hash={}",
+      "query_id=test&user={}&auth_date=123&hash={}",
       js_sys::encode_uri_component(&large_user),
       "0".repeat(64)
     );
@@ -272,7 +296,7 @@ mod tests {
 
   #[wasm_bindgen_test]
   fn test_reject_hash_as_first_parameter() {
-    let validate = create_validator(BOT_TOKEN).unwrap();
+    let validate = create_validator(BOT_TOKEN, None).unwrap();
     let init_data = format!("hash={}&auth_date=123", "0".repeat(64));
     let result = validate.call1(&JsValue::NULL, &JsValue::from_str(&init_data));
     assert!(result.is_err());
@@ -281,7 +305,7 @@ mod tests {
 
   #[wasm_bindgen_test]
   fn test_reject_parameters_after_hash() {
-    let validate = create_validator(BOT_TOKEN).unwrap();
+    let validate = create_validator(BOT_TOKEN, None).unwrap();
     let init_data = format!("auth_date=123&hash={}&foo=bar", "0".repeat(64));
     let result = validate.call1(&JsValue::NULL, &JsValue::from_str(&init_data));
     assert!(result.is_err());
@@ -290,8 +314,8 @@ mod tests {
 
   #[wasm_bindgen_test]
   fn test_handle_case_insensitive_key_sorting() {
-    let validate = create_validator(BOT_TOKEN).unwrap();
-    let init_data = format!("B=2&a=1&hash={}", "0".repeat(64));
+    let validate = create_validator(BOT_TOKEN, None).unwrap();
+    let init_data = format!("B=2&a=1&auth_date=123&hash={}", "0".repeat(64));
     let result = validate.call1(&JsValue::NULL, &JsValue::from_str(&init_data));
     assert!(result.is_err());
     assert_eq!(get_error_message(result.unwrap_err()), "Hash verification failed");
@@ -299,8 +323,8 @@ mod tests {
 
   #[wasm_bindgen_test]
   fn test_handle_encoded_special_characters() {
-    let validate = create_validator(BOT_TOKEN).unwrap();
-    let init_data = format!("key%3D=value%26&hash={}", "0".repeat(64));
+    let validate = create_validator(BOT_TOKEN, None).unwrap();
+    let init_data = format!("key%3D=value%26&auth_date=123&hash={}", "0".repeat(64));
     let result = validate.call1(&JsValue::NULL, &JsValue::from_str(&init_data));
     assert!(result.is_err());
     assert_eq!(get_error_message(result.unwrap_err()), "Hash verification failed");
@@ -308,8 +332,8 @@ mod tests {
 
   #[wasm_bindgen_test]
   fn test_handle_empty_key_or_value() {
-    let validate = create_validator(BOT_TOKEN).unwrap();
-    let init_data = format!("=value&key=&hash={}", "0".repeat(64));
+    let validate = create_validator(BOT_TOKEN, None).unwrap();
+    let init_data = format!("=value&key=&auth_date=123&hash={}", "0".repeat(64));
     let result = validate.call1(&JsValue::NULL, &JsValue::from_str(&init_data));
     assert!(result.is_err());
     assert_eq!(get_error_message(result.unwrap_err()), "Hash verification failed");
@@ -317,8 +341,8 @@ mod tests {
 
   #[wasm_bindgen_test]
   fn test_handle_multiple_equals_in_pair() {
-    let validate = create_validator(BOT_TOKEN).unwrap();
-    let init_data = format!("key=val=ue&hash={}", "0".repeat(64));
+    let validate = create_validator(BOT_TOKEN, None).unwrap();
+    let init_data = format!("key=val=ue&auth_date=123&hash={}", "0".repeat(64));
     let result = validate.call1(&JsValue::NULL, &JsValue::from_str(&init_data));
     assert!(result.is_err());
     assert_eq!(get_error_message(result.unwrap_err()), "Hash verification failed");
@@ -326,8 +350,56 @@ mod tests {
 
   #[wasm_bindgen_test]
   fn test_reject_multiple_hash_parameters() {
-    let validate = create_validator(BOT_TOKEN).unwrap();
-    let init_data = format!("hash=invalid&hash={}", "0".repeat(64));
+    let validate = create_validator(BOT_TOKEN, None).unwrap();
+    let init_data = format!("hash=invalid&auth_date=123&hash={}", "0".repeat(64));
+    let result = validate.call1(&JsValue::NULL, &JsValue::from_str(&init_data));
+    assert!(result.is_err());
+    assert_eq!(get_error_message(result.unwrap_err()), "Hash verification failed");
+  }
+
+  #[wasm_bindgen_test]
+  fn test_reject_missing_auth_date() {
+    let validate = create_validator(BOT_TOKEN, None).unwrap();
+    let init_data = format!("query_id=test&hash={}", "0".repeat(64));
+    let result = validate.call1(&JsValue::NULL, &JsValue::from_str(&init_data));
+    assert!(result.is_err());
+    assert_eq!(get_error_message(result.unwrap_err()), "Hash verification failed");
+  }
+
+  #[wasm_bindgen_test]
+  fn test_reject_malformed_auth_date() {
+    let validate = create_validator(BOT_TOKEN, None).unwrap();
+    let init_data = format!("auth_date=invalid&hash={}", "0".repeat(64));
+    let result = validate.call1(&JsValue::NULL, &JsValue::from_str(&init_data));
+    assert!(result.is_err());
+    assert_eq!(get_error_message(result.unwrap_err()), "Hash verification failed");
+  }
+
+  #[wasm_bindgen_test]
+  fn test_reject_expired_data() {
+    let validate = create_validator(BOT_TOKEN, Some(60)).unwrap(); // 1 minute expiration
+    let now = (js_sys::Date::now() as u64 / 1000) - 120; // 2 minutes ago
+    let init_data = format!("auth_date={}&hash={}", now, "0".repeat(64));
+    let result = validate.call1(&JsValue::NULL, &JsValue::from_str(&init_data));
+    assert!(result.is_err());
+    assert_eq!(get_error_message(result.unwrap_err()), "Hash verification failed");
+  }
+
+  #[wasm_bindgen_test]
+  fn test_accept_non_expired_data() {
+    let validate = create_validator(BOT_TOKEN, Some(3600)).unwrap(); // 1 hour expiration
+    let now = js_sys::Date::now() as u64 / 1000;
+    let init_data = format!("auth_date={}&hash={}", now - 60, "0".repeat(64)); // 1 minute ago
+    let result = validate.call1(&JsValue::NULL, &JsValue::from_str(&init_data));
+    assert!(result.is_err());
+    assert_eq!(get_error_message(result.unwrap_err()), "Hash verification failed");
+  }
+
+  #[wasm_bindgen_test]
+  fn test_disable_expiration_check() {
+    let validate = create_validator(BOT_TOKEN, Some(0)).unwrap(); // Disable expiration
+    let old_timestamp = 1577836800; // January 1, 2020
+    let init_data = format!("auth_date={}&hash={}", old_timestamp, "0".repeat(64));
     let result = validate.call1(&JsValue::NULL, &JsValue::from_str(&init_data));
     assert!(result.is_err());
     assert_eq!(get_error_message(result.unwrap_err()), "Hash verification failed");

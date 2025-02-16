@@ -1,20 +1,18 @@
-import { assertEquals, assertThrows } from "jsr:@std/assert";
+import { assert, assertEquals, assertThrows } from "jsr:@std/assert";
 import tgtb from "@izzqz/tgtb";
 import { FakeTime } from "jsr:@std/testing/time";
-import { signInitData } from "../src/utils/test-utils.ts";
+import { randomInitData, signInitData } from "../src/utils/test-utils.ts";
 
 const BOT_TOKEN = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
-const VALID_BOT_TOKEN = "7040088495:AAHVy6LQH-RvZzYi7c5-Yv5w046qPUO2NTk";
-const VALID_INIT_DATA =
-  "query_id=AAF9tpYRAAAAAH22lhEbSiPx&user=%7B%22id%22%3A295089789%2C%22first_name%22%3A%22Viacheslav%22%2C%22last_name%22%3A%22Melnikov%22%2C%22username%22%3A%22the_real_izzqz%22%2C%22language_code%22%3A%22en%22%2C%22is_premium%22%3Atrue%2C%22allows_write_to_pm%22%3Atrue%7D&auth_date=1717087395&hash=7d14c29d52a97f6b71d67c5cb79394675523b53826516f489fb318716389eb7b";
 
 Deno.test("validate_webapp", async (t) => {
   const client = tgtb(BOT_TOKEN);
 
-  await t.step("should validate real-world valid init data", () => {
-    const validClient = tgtb(VALID_BOT_TOKEN);
-    const result = validClient.init_data.isValid(VALID_INIT_DATA);
-    assertEquals(result, true);
+  await t.step("should validate random init data", async () => {
+    const initData = await randomInitData(BOT_TOKEN);
+
+    assert(client.init_data.validate(initData));
+    assert(client.init_data.isValid(initData));
   });
 
   await t.step("should reject empty bot token", () => {
@@ -33,12 +31,18 @@ Deno.test("validate_webapp", async (t) => {
     );
   });
 
-  await t.step("should reject missing hash field", () => {
-    const initData =
-      "query_id=AAHdF6IQAAAAAN0XohDhrOrc&user=%7B%22id%22%3A1234567890%7D&auth_date=1234567890";
+  await t.step("should reject missing hash field", async () => {
+    const auth_date = Math.floor(Date.now() / 1000);
+    const initData = await signInitData(BOT_TOKEN, {
+      user: { id: 123456789 },
+      query_id: "test123",
+      auth_date,
+    });
+    const noHashData = initData.split("&").filter((p) => !p.startsWith("hash="))
+      .join("&");
 
     assertThrows(
-      () => client.init_data.validate(initData),
+      () => client.init_data.validate(noHashData),
       Error,
       "hash field not found",
     );
@@ -104,38 +108,38 @@ Deno.test("validate_webapp", async (t) => {
     );
   });
 
-  await t.step("should handle large input data", () => {
+  await t.step("should handle large input data", async () => {
     const largeUser = {
       id: 123456789,
       first_name: "A".repeat(1000),
       last_name: "B".repeat(1000),
       username: "C".repeat(100),
     };
-    const initData = `query_id=test&user=${
-      encodeURIComponent(JSON.stringify(largeUser))
-    }&hash=${"0".repeat(64)}`;
+    const auth_date = Math.floor(Date.now() / 1000);
+    const initData = await signInitData(BOT_TOKEN, {
+      user: largeUser,
+      query_id: "test123",
+      auth_date,
+    });
 
-    assertThrows(
-      () => client.init_data.validate(initData),
-      Error,
-      "Hash verification failed",
-    );
+    assertEquals(client.init_data.validate(initData), true);
   });
 
-  await t.step("should validate real-world example with valid hash", () => {
-    // Note: This is a real-world example structure, but with an invalid hash for security
-    const initData = "query_id=AAHdF6IQAAAAAN0XohDhrOrc" +
-      "&user=%7B%22id%22%3A123456789%2C%22first_name%22%3A%22Test%22%2C%22last_name%22%3A%22User%22%2C" +
-      "%22username%22%3A%22testuser%22%2C%22language_code%22%3A%22en%22%7D" +
-      "&auth_date=1707116400" +
-      "&start_param=test_start" +
-      "&hash=" + "0".repeat(64);
+  await t.step("should validate structured data with valid hash", async () => {
+    const auth_date = Math.floor(Date.now() / 1000);
+    const initData = await signInitData(BOT_TOKEN, {
+      user: {
+        id: 123456789,
+        first_name: "Test",
+        last_name: "User",
+        username: "testuser",
+        language_code: "en",
+      },
+      query_id: "test123",
+      auth_date,
+    });
 
-    assertThrows(
-      () => client.init_data.validate(initData),
-      Error,
-      "Hash verification failed",
-    );
+    assertEquals(client.init_data.validate(initData), true);
   });
 
   await t.step("should reject hash as first parameter", () => {
@@ -224,7 +228,7 @@ Deno.test("validate_webapp", async (t) => {
   });
 
   await t.step("expiration tests", async (t) => {
-    using time = new FakeTime(1707000000000);// Set initial time to a known value
+    using time = new FakeTime(1707000000000);
     const user = {
       id: 123456789,
       first_name: "Test",
@@ -235,23 +239,20 @@ Deno.test("validate_webapp", async (t) => {
     await t.step(
       "should accept non-expired data with expiration set",
       async () => {
-        const auth_date = Math.floor(time.now / 1000); // Current time in seconds
+        const auth_date = Math.floor(time.now / 1000);
         const initData = await signInitData(BOT_TOKEN, {
           user,
           query_id: "test123",
           auth_date,
         });
 
-        const client = tgtb(BOT_TOKEN, { hash_expiration: 3600 }); // 1 hour expiration
+        const client = tgtb(BOT_TOKEN, { hash_expiration: 3600 });
 
-        // Check immediately - should be valid
         assertEquals(client.init_data.isValid(initData), true);
 
-        // Move forward 30 minutes - should still be valid
         time.tick(1800 * 1000);
         assertEquals(client.init_data.isValid(initData), true);
 
-        // Move forward another 31 minutes (total 61 minutes) - should be expired
         time.tick(1860 * 1000);
         assertThrows(
           () => client.init_data.validate(initData),
@@ -271,10 +272,8 @@ Deno.test("validate_webapp", async (t) => {
 
       const client = tgtb(BOT_TOKEN, { hash_expiration: 0 });
 
-      // Check immediately
       assertEquals(client.init_data.isValid(initData), true);
 
-      // Move forward 1 year
       time.tick(365 * 24 * 60 * 60 * 1000);
       assertEquals(client.init_data.isValid(initData), true);
     });
@@ -289,10 +288,8 @@ Deno.test("validate_webapp", async (t) => {
 
       const client = tgtb(BOT_TOKEN, { hash_expiration: null });
 
-      // Check immediately
       assertEquals(client.init_data.isValid(initData), true);
 
-      // Move forward 1 year
       time.tick(365 * 24 * 60 * 60 * 1000);
       assertEquals(client.init_data.isValid(initData), true);
     });
@@ -305,12 +302,10 @@ Deno.test("validate_webapp", async (t) => {
         auth_date,
       });
 
-      const client = tgtb(BOT_TOKEN); // No expires_in provided
+      const client = tgtb(BOT_TOKEN);
 
-      // Check immediately
       assertEquals(client.init_data.isValid(initData), true);
 
-      // Move forward 1 year
       time.tick(365 * 24 * 60 * 60 * 1000);
       assertEquals(client.init_data.isValid(initData), true);
     });
@@ -323,16 +318,13 @@ Deno.test("validate_webapp", async (t) => {
         auth_date: startTime,
       });
 
-      const client = tgtb(BOT_TOKEN, { hash_expiration: 60 }); // 60 seconds expiration
+      const client = tgtb(BOT_TOKEN, { hash_expiration: 60 });
 
-      // Initial check - should be valid
       assertEquals(client.init_data.isValid(initData), true);
 
-      // Move to 59 seconds - should still be valid
       time.tick(59 * 1000);
       assertEquals(client.init_data.isValid(initData), true);
 
-      // Move to exactly 60 seconds - should be expired
       time.tick(1000);
       assertThrows(
         () => client.init_data.validate(initData),

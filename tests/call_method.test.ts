@@ -284,4 +284,24 @@ describe("api", () => {
 
     assertEquals(response, complexResponse);
   });
+
+  it("should use test mode URL when configured", async () => {
+    let capturedUrl: string | undefined;
+
+    mockFetch = async (input: string | URL | Request) => {
+      capturedUrl = input.toString();
+      return new Response(JSON.stringify({ ok: true, result: {} }));
+    };
+
+    client = tgtb(BOT_TOKEN, {
+      fetch_fn: mockFetch,
+      use_test_mode: true,
+    });
+    await client.api.getMe();
+
+    assertEquals(
+      capturedUrl,
+      `${DEFAULT_BASE_URL}${BOT_TOKEN}/test/getMe`,
+    );
+  });
 });

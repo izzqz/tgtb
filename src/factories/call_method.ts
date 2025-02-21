@@ -25,7 +25,8 @@ export function buildCallMethod(
     method: M,
     params?: Opts<F>[M],
   ): Promise<ApiResponse<ReturnType<ApiMethods<F>[M]>>> => {
-    const url = new URL(base_url.concat(bot_token, "/", method));
+    const postfix = config.use_test_mode ? "/test/" : "/";
+    const url = new URL(base_url.concat(bot_token, postfix, method));
 
     // append params
     for (const key in params) {

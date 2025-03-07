@@ -1,5 +1,7 @@
 {
   "name": "@izzqz/tgtb",
+  "version": "0.1.0",
+  "license": "MIT",
   "exports": {
     ".": "./src/mod.ts",
     "./types": "./src/types/telegram.ts",

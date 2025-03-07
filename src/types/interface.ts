@@ -98,27 +98,27 @@ export interface Client<F = unknown> {
    * bot.init_data.validate(initData); // true or Error
    * ```
    */
-  init_data: {
-    /**
-     * Validate data from webapp and return boolean
-     */
-    isValid: (init_data: string) => boolean;
-    /**
-     * Validate data from webapp and trow if not valid
-     */
-    validate: (init_data: string) => true | Error;
-  };
+  // init_data: {
+  //   /**
+  //    * Validate data from webapp and return boolean
+  //    */
+  //   isValid: (init_data: string) => boolean;
+  //   /**
+  //    * Validate data from webapp and trow if not valid
+  //    */
+  //   validate: (init_data: string) => true | Error;
+  // };
 
-  oauth: {
-    /**
-     * Validate user data from telegram widget and return boolean
-     */
-    isValid: (oauth_user: TelegramOAuthUser) => boolean;
-    /**
-     * Validate user data from telegram widget and trow if not valid
-     */
-    validate: (oauth_user: TelegramOAuthUser) => true | Error;
-  };
+  // oauth: {
+  //   /**
+  //    * Validate user data from telegram widget and return boolean
+  //    */
+  //   isValid: (oauth_user: TelegramOAuthUser) => boolean;
+  //   /**
+  //    * Validate user data from telegram widget and trow if not valid
+  //    */
+  //   validate: (oauth_user: TelegramOAuthUser) => true | Error;
+  // };
 }
 
 /**

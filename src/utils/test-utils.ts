@@ -124,8 +124,8 @@ export function randomBotUsername(): string {
  * @returns The hash of the data.
  */
 async function hmacSha256(
-  key: ArrayBuffer,
-  data: ArrayBuffer,
+  key: Uint8Array | ArrayBuffer,
+  data: Uint8Array | ArrayBuffer,
 ): Promise<ArrayBuffer> {
   const cryptoKey = await crypto.subtle.importKey(
     "raw",

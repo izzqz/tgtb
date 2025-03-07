@@ -161,7 +161,7 @@ Deno.test("validate_oauth", async (t) => {
   });
 
   await t.step("expiration tests", async (t) => {
-    using _time = new FakeTime(1707000000000);// Set initial time to a known value
+    using _time = new FakeTime(1707000000000); // Set initial time to a known value
     const baseUser = {
       id: 123456789,
       first_name: "Test",

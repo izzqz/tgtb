@@ -1,11 +1,17 @@
 {
   "name": "@izzqz/tgtb",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "MIT",
   "exports": {
     ".": "./src/mod.ts",
     "./types": "./src/types/telegram.ts",
     "./utils": "./src/utils/mod.ts",
     "./constants": "./src/constants.ts"
+  },
+  "publish": {
+    "include": [
+      "src/**/*",
+      "lib/**/*"
+    ]
   }
 }

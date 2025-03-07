@@ -87,8 +87,9 @@ export default function tgtb(
   };
   return {
     api: buildAPICaller(bot_token, mergedConfig),
-    init_data: buildInitDataTools(bot_token, mergedConfig),
-    oauth: buildOAuthTools(bot_token, mergedConfig),
+    // TODO: fix malocc error
+    // init_data: buildInitDataTools(bot_token, mergedConfig),
+    // oauth: buildOAuthTools(bot_token, mergedConfig),
   };
 }
 

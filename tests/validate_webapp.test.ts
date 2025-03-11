@@ -1,14 +1,7 @@
-import {
-  assert,
-  assertEquals,
-  assertRejects,
-  assertThrows,
-} from "jsr:@std/assert";
+import { assertEquals, assertRejects } from "jsr:@std/assert";
 import tgtb from "@izzqz/tgtb";
 import { FakeTime } from "jsr:@std/testing/time";
 import { randomInitData, signInitData } from "../src/utils/test-utils.ts";
-import { assertFp } from "jsr:@std/internal@^1.0.5/diff";
-import { getAssertionState } from "jsr:@std/internal@^1.0.5/assertion-state";
 
 const BOT_TOKEN = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
 

@@ -53,6 +53,8 @@ function createInitDataValidator(
     97,
   ]);
 
+  const bot_token_e = encode(bot_token);
+
   const importKey = (buffer: BufferSource) =>
     crypto.subtle.importKey(
       "raw",
@@ -69,31 +71,23 @@ function createInitDataValidator(
       data,
     );
 
-  const secret = Promise.resolve()
+  const secret = Promise.resolve() // need await
     .then(() => importKey(WEB_APP_UINT8))
     .then((key) => sign(key, bot_token_e));
 
-  const bot_token_e = encode(bot_token);
-
-  const extractEntries = (
-    init_data: string,
-  ) => [...new Set(new URLSearchParams(init_data).keys())];
-
   const prepareData = (init_data: string) => {
-    const data = Object.fromEntries(
-      new URLSearchParams(init_data),
-    ) as InitDataLike;
+    const e = new URLSearchParams(init_data);
 
-    const data_check_string = extractEntries(init_data)
-      .filter((key) => key !== "hash")
-      .map((key) => `${key}=${data[key]}`)
+    const data_check_string = [...e.entries()]
+      .filter(([key]) => key !== "hash")
+      .map(([key, value]) => `${key}=${value}`)
       .sort()
       .join("\n");
 
     return {
       data_check_string,
-      hash: data.hash,
-      auth_date: data.auth_date,
+      hash: String(e.get("hash")),
+      auth_date: Number(e.get("auth_date")),
     };
   };
 
@@ -102,13 +96,11 @@ function createInitDataValidator(
 
     const { data_check_string, hash, auth_date } = prepareData(init_data);
 
-    const signature = await Promise.resolve()
+    const computed_hash = await Promise.resolve()
       .then(async () => importKey(await secret))
-      .then((key) => sign(key, encode(data_check_string)));
-
-    const computed_hash = [...new Uint8Array(signature)]
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
+      .then((k) => sign(k, encode(data_check_string)))
+      .then((s) => Array.from(new Uint8Array(s)))
+      .then((s) => s.map((b) => b.toString(16).padStart(2, "0")).join(""));
 
     if (hash !== computed_hash) {
       throw new Error("hash mismatch");

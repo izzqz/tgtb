@@ -1,4 +1,4 @@
-import { create_oauth_validator } from "../../lib/tg_validator.js";
+// import { create_oauth_validator } from "../../lib/tg_validator.js";
 import type { TgtbConfig } from "../types/interface.ts";
 import type { TelegramOAuthUser } from "../types/telegram.ts";
 /**
@@ -12,7 +12,9 @@ export default function buildInitDataTools(
   bot_token: string,
   { hash_expiration }: TgtbConfig,
 ) {
-  const validate = create_oauth_validator(bot_token, hash_expiration);
+  // const validate = create_oauth_validator(bot_token, hash_expiration);
+
+  const validate = () => {};
 
   return {
     isValid: (oauth_user: TelegramOAuthUser): boolean => {

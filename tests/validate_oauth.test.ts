@@ -9,14 +9,14 @@ const BOT_TOKEN = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
 Deno.test("validate_oauth", async (t) => {
   const client = tgtb(BOT_TOKEN);
 
-  await t.step(" validate random user data", async () => {
+  await t.step("validate random user data", async () => {
     using _time = new FakeTime(1707000000000);
     const user = await randomOAuthUser(BOT_TOKEN);
     await client.oauth.validate(user);
     assertEquals(await client.oauth.isValid(user), true);
   });
 
-  await t.step(" reject missing hash field", async () => {
+  await t.step("reject missing hash field", async () => {
     const user = {
       id: 123456789,
       first_name: "Test",
@@ -29,7 +29,7 @@ Deno.test("validate_oauth", async (t) => {
     assertEquals(await client.oauth.isValid(user), false);
   });
 
-  await t.step(" reject empty hash", async () => {
+  await t.step("reject empty hash", async () => {
     const user = {
       id: 123456789,
       first_name: "Test",
@@ -43,7 +43,7 @@ Deno.test("validate_oauth", async (t) => {
     assertEquals(await client.oauth.isValid(user), false);
   });
 
-  await t.step(" reject empty oauth_user", async () => {
+  await t.step("reject empty oauth_user", async () => {
     const user = {} as TelegramOAuthUser;
 
     await assertRejects(
@@ -52,7 +52,7 @@ Deno.test("validate_oauth", async (t) => {
     assertEquals(await client.oauth.isValid(user), false);
   });
 
-  await t.step(" reject nullish oauth_user", async () => {
+  await t.step("reject nullish oauth_user", async () => {
     const user = null as unknown as TelegramOAuthUser;
 
     await assertRejects(
@@ -61,7 +61,7 @@ Deno.test("validate_oauth", async (t) => {
     assertEquals(await client.oauth.isValid(user), false);
   });
 
-  await t.step(" reject non-hex hash characters", async () => {
+  await t.step("reject non-hex hash characters", async () => {
     const user = {
       id: 123456789,
       first_name: "Test",
@@ -75,7 +75,7 @@ Deno.test("validate_oauth", async (t) => {
     assertEquals(await client.oauth.isValid(user), false);
   });
 
-  await t.step(" reject incorrect hash length", async () => {
+  await t.step("reject incorrect hash length", async () => {
     const user = {
       id: 123456789,
       first_name: "Test",
@@ -89,7 +89,7 @@ Deno.test("validate_oauth", async (t) => {
     assertEquals(await client.oauth.isValid(user), false);
   });
 
-  await t.step(" reject hash verification failure", async () => {
+  await t.step("reject hash verification failure", async () => {
     const user = {
       id: 123456789,
       first_name: "Test",
@@ -103,7 +103,7 @@ Deno.test("validate_oauth", async (t) => {
     assertEquals(await client.oauth.isValid(user), false);
   });
 
-  await t.step(" handle large input data", async () => {
+  await t.step("handle large input data", async () => {
     const user = {
       id: 123456789,
       first_name: "A".repeat(1000),
@@ -119,7 +119,7 @@ Deno.test("validate_oauth", async (t) => {
     assertEquals(await client.oauth.isValid(user), false);
   });
 
-  await t.step(" handle special characters in user data", async () => {
+  await t.step("handle special characters in user data", async () => {
     using _time = new FakeTime(1707000000000);
     const auth_date = Math.floor(_time.now / 1000);
     const user = await signOAuthUser(BOT_TOKEN, {
@@ -136,7 +136,7 @@ Deno.test("validate_oauth", async (t) => {
   });
 
   await t.step(
-    " return false for invalid user data in isValid",
+    "return false for invalid user data in isValid",
     async () => {
       const invalidUser = {
         id: 123456789,
@@ -152,7 +152,7 @@ Deno.test("validate_oauth", async (t) => {
     },
   );
 
-  await t.step(" return true from validate for valid data", async () => {
+  await t.step("return true from validate for valid data", async () => {
     using _time = new FakeTime(1707000000000);
     const auth_date = Math.floor(_time.now / 1000);
     const user = await signOAuthUser(BOT_TOKEN, {
@@ -175,7 +175,7 @@ Deno.test("validate_oauth", async (t) => {
     };
 
     await t.step(
-      " accept non-expired data with expiration set",
+      "accept non-expired data with expiration set",
       async () => {
         const auth_date = Math.floor(time.now / 1000); // Current time in seconds
         const user = await signOAuthUser(BOT_TOKEN, {
@@ -201,7 +201,7 @@ Deno.test("validate_oauth", async (t) => {
       },
     );
 
-    await t.step(" not expire when expires_in is 0", async () => {
+    await t.step("not expire when expires_in is 0", async () => {
       const auth_date = Math.floor(time.now / 1000);
       const user = await signOAuthUser(BOT_TOKEN, {
         ...baseUser,
@@ -220,7 +220,7 @@ Deno.test("validate_oauth", async (t) => {
       assertEquals(await client.oauth.isValid(user), true);
     });
 
-    await t.step(" not expire when expires_in is null", async () => {
+    await t.step("not expire when expires_in is null", async () => {
       const auth_date = Math.floor(time.now / 1000);
       const user = await signOAuthUser(BOT_TOKEN, {
         ...baseUser,
@@ -239,7 +239,7 @@ Deno.test("validate_oauth", async (t) => {
       assertEquals(await client.oauth.isValid(user), true);
     });
 
-    await t.step(" not expire when expires_in is undefined", async () => {
+    await t.step("not expire when expires_in is undefined", async () => {
       const auth_date = Math.floor(time.now / 1000);
       const user = await signOAuthUser(BOT_TOKEN, {
         ...baseUser,
@@ -258,7 +258,7 @@ Deno.test("validate_oauth", async (t) => {
       assertEquals(await client.oauth.isValid(user), true);
     });
 
-    await t.step(" expire exactly at expiration time", async () => {
+    await t.step("expire exactly at expiration time", async () => {
       const startTime = Math.floor(time.now / 1000);
       const user = await signOAuthUser(BOT_TOKEN, {
         ...baseUser,

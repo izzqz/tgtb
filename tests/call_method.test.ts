@@ -2,14 +2,14 @@
 import { assertEquals, assertRejects } from "jsr:@std/assert";
 import { beforeEach, describe, it } from "jsr:@std/testing/bdd";
 
-import tgtb from "@izzqz/tgtb";
+import tgtb, { type Client } from "@izzqz/tgtb";
 import type { ApiError } from "@izzqz/tgtb/types";
 
 describe("api", () => {
   const BOT_TOKEN = "test_token";
   const DEFAULT_BASE_URL = "https://api.telegram.org/bot";
   let mockFetch: typeof fetch;
-  let client: ReturnType<typeof tgtb>;
+  let client: Client;
 
   beforeEach(() => {
     // Reset mock for each test
@@ -24,7 +24,7 @@ describe("api", () => {
     });
   });
 
-  it(" construct correct URL with base parameters", async () => {
+  it("construct correct URL with base parameters", async () => {
     let capturedUrl: string | undefined;
 
     mockFetch = async (input: string | URL | Request) => {
@@ -41,7 +41,7 @@ describe("api", () => {
     );
   });
 
-  it(" handle primitive parameters correctly", async () => {
+  it("handle primitive parameters correctly", async () => {
     let capturedUrl: string | undefined;
 
     mockFetch = async (input: string | URL | Request) => {
@@ -60,7 +60,7 @@ describe("api", () => {
     assertEquals(url.searchParams.get("text"), "test message");
   });
 
-  it(" handle object parameters correctly", async () => {
+  it("handle object parameters correctly", async () => {
     let capturedUrl: string | undefined;
     const complexObject = {
       keyboard: [[{ text: "Button 1" }, { text: "Button 2" }]],
@@ -86,7 +86,7 @@ describe("api", () => {
     );
   });
 
-  it(" use custom base URL when provided", async () => {
+  it("use custom base URL when provided", async () => {
     let capturedUrl: string | undefined;
     const customBaseUrl = "https://custom.api.telegram.org/bot";
 
@@ -107,7 +107,7 @@ describe("api", () => {
     );
   });
 
-  it(" handle successful API responses", async () => {
+  it("handle successful API responses", async () => {
     const expectedResponse = {
       ok: true as const,
       result: {
@@ -135,7 +135,7 @@ describe("api", () => {
     assertEquals(response, expectedResponse);
   });
 
-  it(" handle API errors gracefully", async () => {
+  it("handle API errors gracefully", async () => {
     mockFetch = async () => {
       return new Response(
         JSON.stringify({
@@ -154,7 +154,7 @@ describe("api", () => {
     assertEquals(response.description, "Not Found");
   });
 
-  it(" handle network errors", async () => {
+  it("handle network errors", async () => {
     mockFetch = async () => {
       throw new Error("Network error");
     };
@@ -170,7 +170,7 @@ describe("api", () => {
     );
   });
 
-  it(" handle undefined parameter values", async () => {
+  it("handle undefined parameter values", async () => {
     let capturedUrl: string | undefined;
 
     mockFetch = async (input: string | URL | Request) => {
@@ -189,7 +189,7 @@ describe("api", () => {
     assertEquals(url.searchParams.get("reply_to_message_id"), "undefined");
   });
 
-  it(" work with no parameters", async () => {
+  it("work with no parameters", async () => {
     let capturedUrl: string | undefined;
 
     mockFetch = async (input: string | URL | Request) => {
@@ -204,7 +204,7 @@ describe("api", () => {
     assertEquals(Array.from(url.searchParams.entries()).length, 0);
   });
 
-  it(" handle falsy parameter values", async () => {
+  it("handle falsy parameter values", async () => {
     let capturedUrl: string | undefined;
 
     mockFetch = async (input: string | URL | Request) => {
@@ -223,7 +223,7 @@ describe("api", () => {
     assertEquals(url.searchParams.get("disable_notification"), "false");
   });
 
-  it(" handle optional parameters", async () => {
+  it("handle optional parameters", async () => {
     let capturedUrl: string | undefined;
 
     mockFetch = async (input: string | URL | Request) => {
@@ -246,7 +246,7 @@ describe("api", () => {
     assertEquals(url.searchParams.get("message_thread_id"), "789");
   });
 
-  it(" handle complex response types", async () => {
+  it("handle complex response types", async () => {
     const complexResponse = {
       ok: true as const,
       result: {
@@ -285,7 +285,7 @@ describe("api", () => {
     assertEquals(response, complexResponse);
   });
 
-  it(" use test mode URL when configured", async () => {
+  it("use test mode URL when configured", async () => {
     let capturedUrl: string | undefined;
 
     mockFetch = async (input: string | URL | Request) => {
@@ -305,7 +305,7 @@ describe("api", () => {
     );
   });
 
-  it(" provide .url property on API methods", () => {
+  it("provide .url property on API methods", () => {
     const client = tgtb(BOT_TOKEN);
 
     assertEquals(
@@ -319,7 +319,7 @@ describe("api", () => {
     );
   });
 
-  it(" provide .url property with test mode", () => {
+  it("provide .url property with test mode", () => {
     const client = tgtb(BOT_TOKEN, { use_test_mode: true });
 
     assertEquals(
@@ -328,7 +328,7 @@ describe("api", () => {
     );
   });
 
-  it(" provide .url property with custom base URL", () => {
+  it("provide .url property with custom base URL", () => {
     const customBaseUrl = "https://custom.api.telegram.org/bot";
 
     const client = tgtb(BOT_TOKEN, { base_url: customBaseUrl });

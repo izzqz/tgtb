@@ -8,14 +8,14 @@ const BOT_TOKEN = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
 Deno.test("validate_webapp", async (t) => {
   const client = tgtb(BOT_TOKEN);
 
-  await t.step(" validate random init data", async () => {
+  await t.step("validate random init data", async () => {
     const initData = await randomInitData(BOT_TOKEN);
 
     assertEquals(await client.init_data.validate(initData), undefined);
     assertEquals(await client.init_data.isValid(initData), true);
   });
 
-  await t.step(" reject hash mismatch", async () => {
+  await t.step("reject hash mismatch", async () => {
     const initData = "query_id=test&user=test&hash=" + "0".repeat(64);
 
     await assertRejects(
@@ -25,7 +25,7 @@ Deno.test("validate_webapp", async (t) => {
     );
   });
 
-  await t.step(" reject empty init data", () => {
+  await t.step("reject empty init data", () => {
     assertRejects(
       () => client.init_data.validate(""),
       Error,
@@ -33,7 +33,7 @@ Deno.test("validate_webapp", async (t) => {
     );
   });
 
-  await t.step(" reject missing hash field", async () => {
+  await t.step("reject missing hash field", async () => {
     const auth_date = Math.floor(Date.now() / 1000);
     const initData = await signInitData(BOT_TOKEN, {
       user: { id: 123456789 },
@@ -48,7 +48,7 @@ Deno.test("validate_webapp", async (t) => {
     );
   });
 
-  await t.step(" reject empty hash", async () => {
+  await t.step("reject empty hash", async () => {
     const initData = "query_id=test&hash=";
 
     await assertRejects(
@@ -56,7 +56,7 @@ Deno.test("validate_webapp", async (t) => {
     );
   });
 
-  await t.step(" reject non-hex hash characters", async () => {
+  await t.step("reject non-hex hash characters", async () => {
     const initData = "query_id=test&hash=xyz123";
 
     await assertRejects(
@@ -64,7 +64,7 @@ Deno.test("validate_webapp", async (t) => {
     );
   });
 
-  await t.step(" reject incorrect hash length", async () => {
+  await t.step("reject incorrect hash length", async () => {
     const initData = "query_id=test&hash=abc123";
 
     await assertRejects(
@@ -72,7 +72,7 @@ Deno.test("validate_webapp", async (t) => {
     );
   });
 
-  await t.step(" reject malformed query pair", async () => {
+  await t.step("reject malformed query pair", async () => {
     const initData = "query_id&user=test&hash=" + "a".repeat(64);
 
     await assertRejects(
@@ -80,7 +80,7 @@ Deno.test("validate_webapp", async (t) => {
     );
   });
 
-  await t.step(" reject invalid URL encoding", async () => {
+  await t.step("reject invalid URL encoding", async () => {
     const initData = "query_id=test&user=%invalid%&hash=" + "0".repeat(64);
 
     await assertRejects(
@@ -88,7 +88,7 @@ Deno.test("validate_webapp", async (t) => {
     );
   });
 
-  await t.step(" handle large input data", async () => {
+  await t.step("handle large input data", async () => {
     const largeUser = {
       id: 123456789,
       first_name: "A".repeat(1000),
@@ -105,7 +105,7 @@ Deno.test("validate_webapp", async (t) => {
     assertEquals(await client.init_data.validate(initData), undefined);
   });
 
-  await t.step(" validate structured data with valid hash", async () => {
+  await t.step("validate structured data with valid hash", async () => {
     const auth_date = Math.floor(Date.now() / 1000);
     const initData = await signInitData(BOT_TOKEN, {
       user: {
@@ -122,7 +122,7 @@ Deno.test("validate_webapp", async (t) => {
     await assertEquals(await client.init_data.validate(initData), undefined);
   });
 
-  await t.step(" reject hash as first parameter", async () => {
+  await t.step("reject hash as first parameter", async () => {
     const initData = `hash=${"0".repeat(64)}&auth_date=123`;
 
     await assertRejects(
@@ -130,7 +130,7 @@ Deno.test("validate_webapp", async (t) => {
     );
   });
 
-  await t.step(" reject parameters after hash", async () => {
+  await t.step("reject parameters after hash", async () => {
     const initData = `auth_date=123&hash=${"0".repeat(64)}&foo=bar`;
 
     await assertRejects(
@@ -138,7 +138,7 @@ Deno.test("validate_webapp", async (t) => {
     );
   });
 
-  await t.step(" handle case-insensitive key sorting", async () => {
+  await t.step("handle case-insensitive key sorting", async () => {
     const initData = `B=2&a=1&hash=${"0".repeat(64)}`;
 
     await assertRejects(
@@ -147,7 +147,7 @@ Deno.test("validate_webapp", async (t) => {
   });
 
   await t.step(
-    " return false for invalid init data in isValid",
+    "return false for invalid init data in isValid",
     async () => {
       const invalidData = "invalid_data";
       assertEquals(await client.init_data.isValid(invalidData), false);
@@ -164,7 +164,7 @@ Deno.test("validate_webapp", async (t) => {
     await assertEquals(await client.init_data.validate(validData), undefined);
   });
 
-  await t.step(" handle encoded special characters", async () => {
+  await t.step("handle encoded special characters", async () => {
     const initData = `key%3D=value%26&hash=${"0".repeat(64)}`;
 
     await assertRejects(
@@ -172,7 +172,7 @@ Deno.test("validate_webapp", async (t) => {
     );
   });
 
-  await t.step(" handle empty key or value", async () => {
+  await t.step("handle empty key or value", async () => {
     const initData = `=value&key=&hash=${"0".repeat(64)}`;
 
     await assertRejects(
@@ -180,7 +180,7 @@ Deno.test("validate_webapp", async (t) => {
     );
   });
 
-  await t.step(" handle multiple equals in pair", async () => {
+  await t.step("handle multiple equals in pair", async () => {
     const initData = `key=val=ue&hash=${"0".repeat(64)}`;
 
     await assertRejects(
@@ -188,7 +188,7 @@ Deno.test("validate_webapp", async (t) => {
     );
   });
 
-  await t.step(" reject multiple hash parameters", async () => {
+  await t.step("reject multiple hash parameters", async () => {
     const initData = `hash=invalid&hash=${"0".repeat(64)}`;
 
     await assertRejects(
@@ -206,7 +206,7 @@ Deno.test("validate_webapp", async (t) => {
     };
 
     await t.step(
-      " accept non-expired data with expiration set",
+      "accept non-expired data with expiration set",
       async () => {
         const auth_date = Math.floor(time.now / 1000);
         const initData = await signInitData(BOT_TOKEN, {
@@ -231,7 +231,7 @@ Deno.test("validate_webapp", async (t) => {
       },
     );
 
-    await t.step(" not expire when expires_in is 0", async () => {
+    await t.step("not expire when expires_in is 0", async () => {
       const auth_date = Math.floor(time.now / 1000);
       const initData = await signInitData(BOT_TOKEN, {
         user,
@@ -247,7 +247,7 @@ Deno.test("validate_webapp", async (t) => {
       assertEquals(await client.init_data.isValid(initData), true);
     });
 
-    await t.step(" not expire when expires_in is null", async () => {
+    await t.step("not expire when expires_in is null", async () => {
       const auth_date = Math.floor(time.now / 1000);
       const initData = await signInitData(BOT_TOKEN, {
         user,
@@ -263,7 +263,7 @@ Deno.test("validate_webapp", async (t) => {
       assertEquals(await client.init_data.isValid(initData), true);
     });
 
-    await t.step(" not expire when expires_in is undefined", async () => {
+    await t.step("not expire when expires_in is undefined", async () => {
       const auth_date = Math.floor(time.now / 1000);
       const initData = await signInitData(BOT_TOKEN, {
         user,

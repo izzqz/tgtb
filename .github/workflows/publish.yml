@@ -1,19 +1,22 @@
 name: Publish
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["ci"]
+    branches: [main]
+    types:
+      - completed
 
 jobs:
   publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-
     permissions:
       contents: read
       id-token: write
-
     steps:
       - uses: actions/checkout@v4
-
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          
       - name: Publish package
-        run: npx jsr publish --provenance
+        run: npx jsr publish

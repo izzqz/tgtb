@@ -340,10 +340,8 @@ Deno.test("randomInitData", async (t) => {
       const hash = params.get("hash")!;
       assertMatch(hash, /^[a-f0-9]{64}$/);
 
-      assert(
-        tgtb(botToken).init_data.validate(initData),
-        "Init data should be valid",
-      );
+      const validator = tgtb(botToken).init_data;
+      await validator.validate(initData);
     },
   );
 
@@ -398,14 +396,9 @@ Deno.test("randomInitData", async (t) => {
     assertSpyCalls(userNameStub, 2);
     assertSpyCalls(arrayElementStub, 2);
     assertSpyCalls(booleanStub, 2);
-    assert(
-      tgtb(botToken).init_data.validate(initData1),
-      "Init data should be valid",
-    );
-    assert(
-      tgtb(botToken).init_data.validate(initData2),
-      "Init data should be valid",
-    );
+    const validator = tgtb(botToken).init_data;
+    await validator.validate(initData1);
+    await validator.validate(initData2);
   });
 
   await t.step("should handle special characters in user data", async () => {
@@ -448,10 +441,8 @@ Deno.test("randomInitData", async (t) => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const initData = await randomInitData(botToken);
 
-    assert(
-      tgtb(botToken).init_data.validate(initData),
-      "Init data should be valid",
-    );
+    const validator = tgtb(botToken).init_data;
+    await validator.validate(initData);
 
     const params = new URLSearchParams(initData);
     const user = JSON.parse(params.get("user")!);
@@ -500,10 +491,8 @@ Deno.test("randomInitData", async (t) => {
     const initData = await randomInitData();
     const expectedBotToken = "123456789:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
-    assert(
-      tgtb(expectedBotToken).init_data.validate(initData),
-      "Init data should be valid with auto-generated bot token",
-    );
+    const validator = tgtb(expectedBotToken).init_data;
+    await validator.validate(initData);
   });
 });
 
@@ -543,10 +532,8 @@ Deno.test("signInitData", async (t) => {
     assertMatch(hash, /^[a-f0-9]{64}$/);
 
     // Verify the data is valid
-    assert(
-      tgtb(botToken).init_data.validate(initData),
-      "Init data should be valid",
-    );
+    const validator = tgtb(botToken).init_data;
+    await validator.validate(initData);
   });
 
   await t.step("should handle special characters in user data", async () => {
@@ -567,10 +554,8 @@ Deno.test("signInitData", async (t) => {
     const initData = await signInitData(botToken, params);
 
     // Verify the data is valid
-    assert(
-      tgtb(botToken).init_data.validate(initData),
-      "Init data should be valid",
-    );
+    const validator = tgtb(botToken).init_data;
+    await validator.validate(initData);
 
     // Verify user data is preserved
     const urlParams = new URLSearchParams(initData);
@@ -650,10 +635,8 @@ Deno.test("signInitData", async (t) => {
     const initData = await signInitData(botToken, params);
 
     // Verify the data is valid
-    assert(
-      tgtb(botToken).init_data.validate(initData),
-      "Init data should be valid",
-    );
+    const validator = tgtb(botToken).init_data;
+    await validator.validate(initData);
 
     // Verify user data is preserved exactly as provided
     const urlParams = new URLSearchParams(initData);
@@ -679,10 +662,8 @@ Deno.test("signInitData", async (t) => {
     const initData = await signInitData(botToken, params);
 
     // Verify the data is valid
-    assert(
-      tgtb(botToken).init_data.validate(initData),
-      "Init data should be valid",
-    );
+    const validator = tgtb(botToken).init_data;
+    await validator.validate(initData);
 
     // Verify user data is preserved exactly as provided
     const urlParams = new URLSearchParams(initData);
@@ -820,10 +801,8 @@ Deno.test("signOAuthUser", async (t) => {
     assertMatch(signedData.hash, /^[a-f0-9]{64}$/);
 
     // Verify the data is valid
-    assert(
-      tgtb(botToken).oauth.validate(signedData),
-      "Signed data should be valid",
-    );
+    const validator = tgtb(botToken).oauth;
+    await validator.validate(signedData);
   });
 
   await t.step("should handle special characters in user data", async () => {
@@ -845,10 +824,8 @@ Deno.test("signOAuthUser", async (t) => {
     assertEquals(signedData.username, "john.doe+test");
 
     // Verify the data is valid
-    assert(
-      tgtb(botToken).oauth.validate(signedData),
-      "Signed data should be valid",
-    );
+    const validator = tgtb(botToken).oauth;
+    await validator.validate(signedData);
   });
 
   await t.step("should generate same hash for same input", async () => {
@@ -916,10 +893,8 @@ Deno.test("signOAuthUser", async (t) => {
     assert(!("username" in signedData), "Undefined fields should be omitted");
 
     // Verify the data is valid
-    assert(
-      tgtb(botToken).oauth.validate(signedData),
-      "Signed data should be valid",
-    );
+    const validator = tgtb(botToken).oauth;
+    await validator.validate(signedData);
   });
 });
 
@@ -993,10 +968,8 @@ Deno.test("randomOAuthUser", async (t) => {
       assertMatch(user.hash, /^[a-f0-9]{64}$/);
 
       // Verify the data is valid
-      assert(
-        tgtb(botToken).oauth.validate(user),
-        "Generated user should be valid",
-      );
+      const validator = tgtb(botToken).oauth;
+      await validator.validate(user);
     },
   );
 
@@ -1057,14 +1030,9 @@ Deno.test("randomOAuthUser", async (t) => {
     assertSpyCalls(imageUrlStub, 2);
 
     // Verify both users are valid
-    assert(
-      tgtb(botToken).oauth.validate(user1),
-      "First user should be valid",
-    );
-    assert(
-      tgtb(botToken).oauth.validate(user2),
-      "Second user should be valid",
-    );
+    const validator = tgtb(botToken).oauth;
+    await validator.validate(user1);
+    await validator.validate(user2);
   });
 
   await t.step("should work without bot_token parameter", async () => {
@@ -1097,10 +1065,8 @@ Deno.test("randomOAuthUser", async (t) => {
     const user = await randomOAuthUser();
     const expectedBotToken = "123456789:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
-    assert(
-      tgtb(expectedBotToken).oauth.validate(user),
-      "User should be valid with auto-generated bot token",
-    );
+    const validator = tgtb(expectedBotToken).oauth;
+    await validator.validate(user);
   });
 
   await t.step(
@@ -1140,10 +1106,8 @@ Deno.test("randomOAuthUser", async (t) => {
       assertEquals(user.username, "john.doe+test");
       assertEquals(user.photo_url, "https://example.com/photo+test.jpg");
 
-      assert(
-        tgtb(botToken).oauth.validate(user),
-        "User with special characters should be valid",
-      );
+      const validator = tgtb(botToken).oauth;
+      await validator.validate(user);
     },
   );
 });

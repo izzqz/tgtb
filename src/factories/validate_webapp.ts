@@ -64,8 +64,8 @@ function createInitDataValidator(
       ["sign"],
     );
 
-  const sign = (key: CryptoKey, data: BufferSource) =>
-    crypto.subtle.sign(
+  const sign = async (key: CryptoKey, data: BufferSource) =>
+    await crypto.subtle.sign(
       "HMAC",
       key,
       data,

@@ -117,7 +117,7 @@ export interface Client<F = unknown> {
     /**
      * Validate user data from telegram widget and trow if not valid
      */
-    validate: (oauth_user: TelegramOAuthUser) => Promise<true | Error>;
+    validate: (oauth_user: TelegramOAuthUser) => Promise<void>;
   };
 }
 

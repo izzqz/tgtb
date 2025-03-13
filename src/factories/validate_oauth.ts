@@ -49,10 +49,15 @@ function createOauthValidator(
     );
 
     // Calculate HMAC (like PHP's hash_hmac('sha256', $data_check_string, $secret_key))
-    const computed_hash = await crypto.subtle
-      .sign("HMAC", hmac_key, encode(data_check_string))
-      .then((s) => Array.from(new Uint8Array(s)))
-      .then((s) => s.map((b) => b.toString(16).padStart(2, "0")).join(""));
+    const signature = await crypto.subtle.sign(
+      "HMAC",
+      hmac_key,
+      encode(data_check_string),
+    );
+    const signatureBytes = Array.from(new Uint8Array(signature));
+    const computed_hash = signatureBytes.map((b) =>
+      b.toString(16).padStart(2, "0")
+    ).join("");
 
     // Compare hashes (like PHP's strcmp($hash, $check_hash) !== 0)
     if (computed_hash !== check_hash) {
@@ -100,10 +105,9 @@ export default function buildInitDataTools(
         return false;
       }
     },
-    validate: async (oauth_user: TelegramOAuthUser): Promise<true> => {
+    validate: async (oauth_user: TelegramOAuthUser): Promise<void> => {
       try {
         await validate(oauth_user);
-        return true;
       } catch (error) {
         throw error instanceof Error ? error : new Error(String(error));
       }

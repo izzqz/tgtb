@@ -1,6 +1,6 @@
 /**
- * @module
  * Types and interfaces for tgtb
+ * @module
  */
 
 import type {

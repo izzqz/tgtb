@@ -1,6 +1,6 @@
 /**
- * @module
  * Crypto utilities
+ * @module
  */
 
 import { TOKEN_CHARS } from "../constants.ts";

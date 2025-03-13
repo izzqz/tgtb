@@ -1,7 +1,7 @@
 /**
- * @module
  * Types for Telegram API, Login Widget, WebApp
  * Also exported from `@grammyjs/types` and `telegram-webapps`
+ * @module
  */
 
 export type * from "npm:@grammyjs/types@3";

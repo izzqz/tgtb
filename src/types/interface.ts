@@ -1,3 +1,8 @@
+/**
+ * @module
+ * Types and interfaces for tgtb
+ */
+
 import type {
   ApiMethods,
   ApiResponse,

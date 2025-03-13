@@ -63,12 +63,9 @@ export default function buildInitDataTools(
 
   return {
     isValid: async (oauth_user: TelegramOAuthUser): Promise<boolean> => {
-      try {
-        await validate(oauth_user);
-        return true;
-      } catch {
-        return false;
-      }
+      return await validate(oauth_user)
+        .then(() => true)
+        .catch(() => false);
     },
     validate,
   };

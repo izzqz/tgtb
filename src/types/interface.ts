@@ -71,7 +71,7 @@ export interface Client<F = unknown> {
    *
    * For every method see [Telegram Bot API](https://core.telegram.org/bots/api)
    *
-   * @example
+   * @example Call method
    * ```ts
    * import tgtb from "@izzqz/tgtb";
    *
@@ -91,9 +91,14 @@ export interface Client<F = unknown> {
    * }
    * ```
    *
-   * You can also get the URL for a method without calling it:
+   * @example Get method URL
    * ```ts
-   * const url = bot.api.getMe.url; // https://api.telegram.org/bot<token>/getMe
+   * import tgtb from "@izzqz/tgtb";
+   *
+   * const bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+   *
+   * const url = tgtb(bot_token).api.getMe.url;
+   * // https://api.telegram.org/bot123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11/getMe
    * ```
    */
   api: TelegramAPI<F>;

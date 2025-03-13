@@ -21,16 +21,11 @@ export default function buildInitDataTools(
 
   return {
     isValid: async (init_data: string): Promise<boolean> => {
-      try {
-        await validate(init_data);
-        return true;
-      } catch {
-        return false;
-      }
+      return await validate(init_data)
+        .then(() => true)
+        .catch(() => false);
     },
-    validate: async (init_data: string): Promise<void> => {
-      return await validate(init_data);
-    },
+    validate,
   };
 }
 

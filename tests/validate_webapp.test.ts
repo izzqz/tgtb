@@ -15,10 +15,10 @@ Deno.test("validate_webapp", async (t) => {
     assertEquals(await client.init_data.isValid(initData), true);
   });
 
-  await t.step("should reject hash mismatch", () => {
+  await t.step("should reject hash mismatch", async () => {
     const initData = "query_id=test&user=test&hash=" + "0".repeat(64);
 
-    assertRejects(
+    await assertRejects(
       () => client.init_data.validate(initData),
       Error,
       "hash mismatch",
@@ -43,47 +43,47 @@ Deno.test("validate_webapp", async (t) => {
     const noHashData = initData.split("&").filter((p) => !p.startsWith("hash="))
       .join("&");
 
-    assertRejects(
+    await assertRejects(
       () => client.init_data.validate(noHashData),
     );
   });
 
-  await t.step("should reject empty hash", () => {
+  await t.step("should reject empty hash", async () => {
     const initData = "query_id=test&hash=";
 
-    assertRejects(
+    await assertRejects(
       () => client.init_data.validate(initData),
     );
   });
 
-  await t.step("should reject non-hex hash characters", () => {
+  await t.step("should reject non-hex hash characters", async () => {
     const initData = "query_id=test&hash=xyz123";
 
-    assertRejects(
+    await assertRejects(
       () => client.init_data.validate(initData),
     );
   });
 
-  await t.step("should reject incorrect hash length", () => {
+  await t.step("should reject incorrect hash length", async () => {
     const initData = "query_id=test&hash=abc123";
 
-    assertRejects(
+    await assertRejects(
       () => client.init_data.validate(initData),
     );
   });
 
-  await t.step("should reject malformed query pair", () => {
+  await t.step("should reject malformed query pair", async () => {
     const initData = "query_id&user=test&hash=" + "a".repeat(64);
 
-    assertRejects(
+    await assertRejects(
       () => client.init_data.validate(initData),
     );
   });
 
-  await t.step("should reject invalid URL encoding", () => {
+  await t.step("should reject invalid URL encoding", async () => {
     const initData = "query_id=test&user=%invalid%&hash=" + "0".repeat(64);
 
-    assertRejects(
+    await assertRejects(
       () => client.init_data.validate(initData),
     );
   });
@@ -119,29 +119,29 @@ Deno.test("validate_webapp", async (t) => {
       auth_date,
     });
 
-    assertEquals(await client.init_data.validate(initData), undefined);
+    await assertEquals(await client.init_data.validate(initData), undefined);
   });
 
-  await t.step("should reject hash as first parameter", () => {
+  await t.step("should reject hash as first parameter", async () => {
     const initData = `hash=${"0".repeat(64)}&auth_date=123`;
 
-    assertRejects(
+    await assertRejects(
       () => client.init_data.validate(initData),
     );
   });
 
-  await t.step("should reject parameters after hash", () => {
+  await t.step("should reject parameters after hash", async () => {
     const initData = `auth_date=123&hash=${"0".repeat(64)}&foo=bar`;
 
-    assertRejects(
+    await assertRejects(
       () => client.init_data.validate(initData),
     );
   });
 
-  await t.step("should handle case-insensitive key sorting", () => {
+  await t.step("should handle case-insensitive key sorting", async () => {
     const initData = `B=2&a=1&hash=${"0".repeat(64)}`;
 
-    assertRejects(
+    await assertRejects(
       () => client.init_data.validate(initData),
     );
   });
@@ -161,37 +161,37 @@ Deno.test("validate_webapp", async (t) => {
       query_id: "test123",
       auth_date,
     });
-    assertEquals(await client.init_data.validate(validData), undefined);
+    await assertEquals(await client.init_data.validate(validData), undefined);
   });
 
-  await t.step("should handle encoded special characters", () => {
+  await t.step("should handle encoded special characters", async () => {
     const initData = `key%3D=value%26&hash=${"0".repeat(64)}`;
 
-    assertRejects(
+    await assertRejects(
       () => client.init_data.validate(initData),
     );
   });
 
-  await t.step("should handle empty key or value", () => {
+  await t.step("should handle empty key or value", async () => {
     const initData = `=value&key=&hash=${"0".repeat(64)}`;
 
-    assertRejects(
+    await assertRejects(
       () => client.init_data.validate(initData),
     );
   });
 
-  await t.step("should handle multiple equals in pair", () => {
+  await t.step("should handle multiple equals in pair", async () => {
     const initData = `key=val=ue&hash=${"0".repeat(64)}`;
 
-    assertRejects(
+    await assertRejects(
       () => client.init_data.validate(initData),
     );
   });
 
-  await t.step("should reject multiple hash parameters", () => {
+  await t.step("should reject multiple hash parameters", async () => {
     const initData = `hash=invalid&hash=${"0".repeat(64)}`;
 
-    assertRejects(
+    await assertRejects(
       () => client.init_data.validate(initData),
     );
   });
@@ -223,7 +223,7 @@ Deno.test("validate_webapp", async (t) => {
         assertEquals(await client.init_data.isValid(initData), false);
 
         time.tick(1860 * 1000);
-        assertRejects(
+        await assertRejects(
           () => client.init_data.validate(initData),
           Error,
           "hash expired",

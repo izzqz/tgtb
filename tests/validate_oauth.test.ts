@@ -13,6 +13,7 @@ Deno.test("validate_oauth", async (t) => {
     using _time = new FakeTime(1707000000000);
     const user = await randomOAuthUser(BOT_TOKEN);
     await client.oauth.validate(user);
+    assertEquals(await client.oauth.isValid(user), true);
   });
 
   await t.step("should reject missing hash field", async () => {
@@ -25,9 +26,10 @@ Deno.test("validate_oauth", async (t) => {
     await assertRejects(
       () => client.oauth.validate(user),
     );
+    assertEquals(await client.oauth.isValid(user), false);
   });
 
-  await t.step("should reject empty hash", () => {
+  await t.step("should reject empty hash", async () => {
     const user = {
       id: 123456789,
       first_name: "Test",
@@ -35,12 +37,31 @@ Deno.test("validate_oauth", async (t) => {
       hash: "",
     } as TelegramOAuthUser;
 
-    assertRejects(
+    await assertRejects(
       () => client.oauth.validate(user),
     );
+    assertEquals(await client.oauth.isValid(user), false);
   });
 
-  await t.step("should reject non-hex hash characters", () => {
+  await t.step("should reject empty oauth_user", async () => {
+    const user = {} as TelegramOAuthUser;
+
+    await assertRejects(
+      () => client.oauth.validate(user),
+    );
+    assertEquals(await client.oauth.isValid(user), false);
+  });
+
+  await t.step("should reject nullish oauth_user", async () => {
+    const user = null as unknown as TelegramOAuthUser;
+
+    await assertRejects(
+      () => client.oauth.validate(user),
+    );
+    assertEquals(await client.oauth.isValid(user), false);
+  });
+
+  await t.step("should reject non-hex hash characters", async () => {
     const user = {
       id: 123456789,
       first_name: "Test",
@@ -48,12 +69,13 @@ Deno.test("validate_oauth", async (t) => {
       hash: "xyz123",
     } as TelegramOAuthUser;
 
-    assertRejects(
+    await assertRejects(
       () => client.oauth.validate(user),
     );
+    assertEquals(await client.oauth.isValid(user), false);
   });
 
-  await t.step("should reject incorrect hash length", () => {
+  await t.step("should reject incorrect hash length", async () => {
     const user = {
       id: 123456789,
       first_name: "Test",
@@ -61,12 +83,13 @@ Deno.test("validate_oauth", async (t) => {
       hash: "abc123",
     } as TelegramOAuthUser;
 
-    assertRejects(
+    await assertRejects(
       () => client.oauth.validate(user),
     );
+    assertEquals(await client.oauth.isValid(user), false);
   });
 
-  await t.step("should reject hash verification failure", () => {
+  await t.step("should reject hash verification failure", async () => {
     const user = {
       id: 123456789,
       first_name: "Test",
@@ -74,12 +97,13 @@ Deno.test("validate_oauth", async (t) => {
       hash: "0".repeat(64),
     } as TelegramOAuthUser;
 
-    assertRejects(
+    await assertRejects(
       () => client.oauth.validate(user),
     );
+    assertEquals(await client.oauth.isValid(user), false);
   });
 
-  await t.step("should handle large input data", () => {
+  await t.step("should handle large input data", async () => {
     const user = {
       id: 123456789,
       first_name: "A".repeat(1000),
@@ -89,9 +113,10 @@ Deno.test("validate_oauth", async (t) => {
       hash: "0".repeat(64),
     } as TelegramOAuthUser;
 
-    assertRejects(
+    await assertRejects(
       () => client.oauth.validate(user),
     );
+    assertEquals(await client.oauth.isValid(user), false);
   });
 
   await t.step("should handle special characters in user data", async () => {
@@ -107,6 +132,7 @@ Deno.test("validate_oauth", async (t) => {
     });
 
     await client.oauth.validate(user);
+    assertEquals(await client.oauth.isValid(user), true);
   });
 
   await t.step(
@@ -119,6 +145,9 @@ Deno.test("validate_oauth", async (t) => {
         hash: "invalid",
       } as TelegramOAuthUser;
 
+      await assertRejects(
+        () => client.oauth.validate(invalidUser),
+      );
       assertEquals(await client.oauth.isValid(invalidUser), false);
     },
   );
@@ -133,6 +162,7 @@ Deno.test("validate_oauth", async (t) => {
     });
 
     await client.oauth.validate(user);
+    assertEquals(await client.oauth.isValid(user), true);
   });
 
   await t.step("expiration tests", async (t) => {
@@ -157,14 +187,17 @@ Deno.test("validate_oauth", async (t) => {
 
         // Check immediately - should be valid
         await client.oauth.validate(user);
+        assertEquals(await client.oauth.isValid(user), true);
 
         // Move forward 30 minutes - should still be valid
         time.tick(1800 * 1000);
         await client.oauth.validate(user);
+        assertEquals(await client.oauth.isValid(user), true);
 
         // Move forward another 31 minutes (total 61 minutes) - should be expired
         time.tick(1860 * 1000);
         await assertRejects(() => client.oauth.validate(user));
+        assertEquals(await client.oauth.isValid(user), false);
       },
     );
 
@@ -179,10 +212,12 @@ Deno.test("validate_oauth", async (t) => {
 
       // Check immediately
       await client.oauth.validate(user);
+      assertEquals(await client.oauth.isValid(user), true);
 
       // Move forward 1 year
       time.tick(365 * 24 * 60 * 60 * 1000);
       await client.oauth.validate(user);
+      assertEquals(await client.oauth.isValid(user), true);
     });
 
     await t.step("should not expire when expires_in is null", async () => {
@@ -196,10 +231,12 @@ Deno.test("validate_oauth", async (t) => {
 
       // Check immediately
       await client.oauth.validate(user);
+      assertEquals(await client.oauth.isValid(user), true);
 
       // Move forward 1 year
       time.tick(365 * 24 * 60 * 60 * 1000);
       await client.oauth.validate(user);
+      assertEquals(await client.oauth.isValid(user), true);
     });
 
     await t.step("should not expire when expires_in is undefined", async () => {
@@ -213,10 +250,12 @@ Deno.test("validate_oauth", async (t) => {
 
       // Check immediately
       await client.oauth.validate(user);
+      assertEquals(await client.oauth.isValid(user), true);
 
       // Move forward 1 year
       time.tick(365 * 24 * 60 * 60 * 1000);
       await client.oauth.validate(user);
+      assertEquals(await client.oauth.isValid(user), true);
     });
 
     await t.step("should expire exactly at expiration time", async () => {
@@ -230,14 +269,17 @@ Deno.test("validate_oauth", async (t) => {
 
       // Initial check - should be valid
       await client.oauth.validate(user);
+      assertEquals(await client.oauth.isValid(user), true);
 
       // Move to 59 seconds - should still be valid
       time.tick(59 * 1000);
       await client.oauth.validate(user);
+      assertEquals(await client.oauth.isValid(user), true);
 
       // Move to exactly 60 seconds - should be expired
       time.tick(1000);
       await assertRejects(() => client.oauth.validate(user));
+      assertEquals(await client.oauth.isValid(user), false);
     });
   });
 });

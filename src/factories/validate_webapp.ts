@@ -59,8 +59,7 @@ function createInitDataValidator(
 
     const { data_check_string, hash, auth_date } = prepareData(init_data);
 
-    const computed_hash = await Promise.resolve()
-      .then(async () => importHMAC(await secret_key))
+    const computed_hash = await importHMAC(await secret_key)
       .then((k) => signHMAC(k, encode(data_check_string)))
       .then((s) => Array.from(new Uint8Array(s)))
       .then((s) => s.map((b) => b.toString(16).padStart(2, "0")).join(""));

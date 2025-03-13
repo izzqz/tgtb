@@ -64,7 +64,7 @@ function createInitDataValidator(
     }
 
     if (hash_expiration && auth_date) {
-      if (Date.now() - auth_date * 1000 >= hash_expiration) {
+      if (Math.floor(Date.now() / 1000) - auth_date >= hash_expiration) {
         throw new Error("hash expired");
       }
     }

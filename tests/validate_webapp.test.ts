@@ -219,10 +219,11 @@ Deno.test("validate_webapp", async (t) => {
 
         assertEquals(await client.init_data.isValid(initData), true);
 
-        time.tick(1800 * 1000);
-        assertEquals(await client.init_data.isValid(initData), false);
+        time.tick(1800 * 1000); // 30 minutes
+        assertEquals(await client.init_data.isValid(initData), true);
 
-        time.tick(1860 * 1000);
+        time.tick(1860 * 1000); // Another 31 minutes (total 61 minutes)
+        assertEquals(await client.init_data.isValid(initData), false);
         await assertRejects(
           () => client.init_data.validate(initData),
           Error,

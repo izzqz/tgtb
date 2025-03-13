@@ -304,4 +304,38 @@ describe("api", () => {
       `${DEFAULT_BASE_URL}${BOT_TOKEN}/test/getMe`,
     );
   });
+
+  it("should provide .url property on API methods", () => {
+    const client = tgtb(BOT_TOKEN);
+
+    assertEquals(
+      client.api.getMe.url,
+      `${DEFAULT_BASE_URL}${BOT_TOKEN}/getMe`,
+    );
+
+    assertEquals(
+      client.api.sendMessage.url,
+      `${DEFAULT_BASE_URL}${BOT_TOKEN}/sendMessage`,
+    );
+  });
+
+  it("should provide .url property with test mode", () => {
+    const client = tgtb(BOT_TOKEN, { use_test_mode: true });
+
+    assertEquals(
+      client.api.getMe.url,
+      `${DEFAULT_BASE_URL}${BOT_TOKEN}/test/getMe`,
+    );
+  });
+
+  it("should provide .url property with custom base URL", () => {
+    const customBaseUrl = "https://custom.api.telegram.org/bot";
+
+    const client = tgtb(BOT_TOKEN, { base_url: customBaseUrl });
+
+    assertEquals(
+      client.api.getMe.url,
+      `${customBaseUrl}${BOT_TOKEN}/getMe`,
+    );
+  });
 });

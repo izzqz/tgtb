@@ -43,13 +43,21 @@ export type BotMethodResponse<F, M extends BotMethodKeys<F>> = Promise<
 >;
 
 /**
+ * Type for API methods that can be called and also provide a URL property
+ * @internal
+ */
+export type APIMethod<F, M extends keyof ApiMethods<F>> = {
+  (params?: Opts<F>[M]): Promise<ApiResponse<ReturnType<ApiMethods<F>[M]>>>;
+  url: string;
+};
+
+/**
  * Type that converts all API methods to return Promises with ApiResponse
+ * and includes a url property to get the method URL
  * @internal
  */
 export type TelegramAPI<F> = {
-  [M in keyof ApiMethods<F>]: (
-    params?: Opts<F>[M],
-  ) => Promise<ApiResponse<ReturnType<ApiMethods<F>[M]>>>;
+  [M in keyof ApiMethods<F>]: APIMethod<F, M>;
 };
 
 /**
@@ -79,6 +87,11 @@ export interface Client<F = unknown> {
    * } else {
    *   console.error(res.description); // "Bad Request: chat not found"
    * }
+   * ```
+   *
+   * You can also get the URL for a method without calling it:
+   * ```ts
+   * const url = bot.api.getMe.url; // https://api.telegram.org/bot<token>/getMe
    * ```
    */
   api: TelegramAPI<F>;

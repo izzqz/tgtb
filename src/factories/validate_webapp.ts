@@ -1,11 +1,17 @@
 import type { TgtbConfig } from "../types/interface.ts";
+import { WEB_APP_UINT8 } from "../constants.ts";
+import {
+  createDataCheckString,
+  encode,
+  importHMAC,
+  signHMAC,
+} from "../utils/crypto.ts";
 
 /**
  * @ignore
  * @internal
  * @param bot_token
  * @param config
- * @returns
  */
 export default function buildInitDataTools(
   bot_token: string,
@@ -32,57 +38,14 @@ function createInitDataValidator(
   bot_token: string,
   hash_expiration: number | null | undefined,
 ) {
-  type InitDataLike = {
-    auth_date: number;
-    hash: string;
-    [key: string]: unknown;
-  };
-
-  const encode = TextEncoder.prototype.encode.bind(new TextEncoder());
-
-  const WEB_APP_UINT8 = new Uint8Array([
-    87,
-    101,
-    98,
-    65,
-    112,
-    112,
-    68,
-    97,
-    116,
-    97,
-  ]);
-
-  const bot_token_e = encode(bot_token);
-
-  const importKey = (buffer: BufferSource) =>
-    crypto.subtle.importKey(
-      "raw",
-      buffer,
-      { name: "HMAC", hash: "SHA-256" },
-      true,
-      ["sign"],
-    );
-
-  const sign = async (key: CryptoKey, data: BufferSource) =>
-    await crypto.subtle.sign(
-      "HMAC",
-      key,
-      data,
-    );
-
-  const secret = Promise.resolve() // need await
-    .then(() => importKey(WEB_APP_UINT8))
-    .then((key) => sign(key, bot_token_e));
+  const secret_key = importHMAC(WEB_APP_UINT8).then((key) =>
+    signHMAC(key, encode(bot_token))
+  );
 
   const prepareData = (init_data: string) => {
     const e = new URLSearchParams(init_data);
 
-    const data_check_string = [...e.entries()]
-      .filter(([key]) => key !== "hash")
-      .map(([key, value]) => `${key}=${value}`)
-      .sort()
-      .join("\n");
+    const data_check_string = createDataCheckString(e.entries());
 
     return {
       data_check_string,
@@ -97,8 +60,8 @@ function createInitDataValidator(
     const { data_check_string, hash, auth_date } = prepareData(init_data);
 
     const computed_hash = await Promise.resolve()
-      .then(async () => importKey(await secret))
-      .then((k) => sign(k, encode(data_check_string)))
+      .then(async () => importHMAC(await secret_key))
+      .then((k) => signHMAC(k, encode(data_check_string)))
       .then((s) => Array.from(new Uint8Array(s)))
       .then((s) => s.map((b) => b.toString(16).padStart(2, "0")).join(""));
 
@@ -106,11 +69,10 @@ function createInitDataValidator(
       throw new Error("hash mismatch");
     }
 
-    if (
-      hash_expiration &&
-      Date.now() - auth_date * 1000 >= hash_expiration
-    ) {
-      throw new Error("hash expired");
+    if (hash_expiration && auth_date) {
+      if (Date.now() - auth_date * 1000 >= hash_expiration) {
+        throw new Error("hash expired");
+      }
     }
   };
 }

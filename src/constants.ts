@@ -1,4 +1,9 @@
 /**
+ * @module
+ * Constants. Useful for Telegram API
+ */
+
+/**
  * Symbols allowed in bot token or secret token
  */
 export const TOKEN_CHARS =

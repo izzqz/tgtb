@@ -43,17 +43,19 @@ export type BotMethodResponse<F, M extends BotMethodKeys<F>> = Promise<
 >;
 
 /**
- * Type for API methods that can be called and also provide a URL property
+ * Type for API methods that can be called
  * @internal
  */
 export type APIMethod<F, M extends keyof ApiMethods<F>> = {
   (params?: Opts<F>[M]): Promise<ApiResponse<ReturnType<ApiMethods<F>[M]>>>;
+  /**
+   * URL for the API method
+   */
   url: string;
 };
 
 /**
- * Type that converts all API methods to return Promises with ApiResponse
- * and includes a url property to get the method URL
+ * Type for Telegram API methods in tgtb
  * @internal
  */
 export type TelegramAPI<F> = {

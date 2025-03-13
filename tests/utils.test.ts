@@ -27,7 +27,7 @@ import tgtb from "@izzqz/tgtb";
 import type { TelegramOAuthUser } from "../src/types/telegram.ts";
 
 Deno.test("randomBotToken", async (t) => {
-  await t.step("should generate valid bot token", () => {
+  await t.step(" generate valid bot token", () => {
     using numberStub = stub(faker.random, "number", returnsNext([12345678]));
     using elementStub = stub(
       faker.random,
@@ -45,7 +45,7 @@ Deno.test("randomBotToken", async (t) => {
     assertSpyCalls(elementStub, 35);
   });
 
-  await t.step("should use provided bot_id", () => {
+  await t.step(" use provided bot_id", () => {
     using elementStub = stub(
       faker.random,
       "arrayElement",
@@ -58,12 +58,12 @@ Deno.test("randomBotToken", async (t) => {
     assertEquals(
       botToken.split(":")[0],
       botId.toString(),
-      `Token should start with provided bot_id (${botToken})`,
+      `Token  start with provided bot_id (${botToken})`,
     );
     assertMatch(
       botToken,
       /^[0-9]{8,10}:[a-zA-Z0-9_-]{35}$/,
-      `Token format should be valid (${botToken})`,
+      `Token format  be valid (${botToken})`,
     );
 
     assertSpyCalls(elementStub, 35);
@@ -71,14 +71,14 @@ Deno.test("randomBotToken", async (t) => {
 });
 
 Deno.test("randomBotId", async (t) => {
-  await t.step("should generate valid bot id", () => {
+  await t.step(" generate valid bot id", () => {
     using numberStub = stub(faker.random, "number", returnsNext([12345678]));
 
     const botId = randomBotId();
     assertMatch(
       botId.toString(),
       /^[0-9]{8,10}$/,
-      `Bot ID should be 8-10 digits (${botId})`,
+      `Bot ID  be 8-10 digits (${botId})`,
     );
 
     assertSpyCall(numberStub, 0, {
@@ -87,7 +87,7 @@ Deno.test("randomBotId", async (t) => {
     });
   });
 
-  await t.step("should generate id within valid range", () => {
+  await t.step(" generate id within valid range", () => {
     const testValues = [10000000, 9999999999, 123456789];
     using numberStub = stub(faker.random, "number", returnsNext(testValues));
 
@@ -96,7 +96,7 @@ Deno.test("randomBotId", async (t) => {
       assertEquals(
         botId,
         expected,
-        `Bot ID should match expected value (got ${botId}, expected ${expected})`,
+        `Bot ID  match expected value (got ${botId}, expected ${expected})`,
       );
     }
 
@@ -105,7 +105,7 @@ Deno.test("randomBotId", async (t) => {
 });
 
 Deno.test("randomBotUsername", async (t) => {
-  await t.step("should generate valid username with CamelCase", () => {
+  await t.step(" generate valid username with CamelCase", () => {
     using numberStub = stub(faker.random, "number", returnsNext([10]));
     using wordStub = stub(faker.random, "word", returnsNext(["testname"]));
     using booleanStub = stub(faker.random, "boolean", returnsNext([true]));
@@ -127,7 +127,7 @@ Deno.test("randomBotUsername", async (t) => {
     });
   });
 
-  await t.step("should generate valid username with snake_case", () => {
+  await t.step(" generate valid username with snake_case", () => {
     using numberStub = stub(faker.random, "number", returnsNext([10]));
     using wordStub = stub(faker.random, "word", returnsNext(["testname"]));
     using booleanStub = stub(faker.random, "boolean", returnsNext([false]));
@@ -149,7 +149,7 @@ Deno.test("randomBotUsername", async (t) => {
     });
   });
 
-  await t.step("should handle non-alphanumeric input", () => {
+  await t.step(" handle non-alphanumeric input", () => {
     using numberStub = stub(faker.random, "number", returnsNext([10]));
     using wordStub = stub(
       faker.random,
@@ -163,7 +163,7 @@ Deno.test("randomBotUsername", async (t) => {
     assertMatch(
       username,
       /^[A-Za-z0-9]+Bot$/,
-      `Username should be valid even with non-alphanumeric input (${username})`,
+      `Username  be valid even with non-alphanumeric input (${username})`,
     );
     assertEquals(username, "TestuserBot");
     assertSpyCall(numberStub, 0, {
@@ -180,7 +180,7 @@ Deno.test("randomBotUsername", async (t) => {
     });
   });
 
-  await t.step("should handle maximum length input", () => {
+  await t.step(" handle maximum length input", () => {
     using numberStub = stub(faker.random, "number", returnsNext([28]));
     using wordStub = stub(
       faker.random,
@@ -194,12 +194,12 @@ Deno.test("randomBotUsername", async (t) => {
     assertEquals(
       username.length <= 32,
       true,
-      `Username should not exceed 32 characters (${username})`,
+      `Username  not exceed 32 characters (${username})`,
     );
     assertEquals(
       username.toLowerCase().endsWith("bot"),
       true,
-      `Username should end with 'bot' (${username})`,
+      `Username  end with 'bot' (${username})`,
     );
     assertSpyCall(numberStub, 0, {
       args: [{ min: 2, max: 28 }],
@@ -215,7 +215,7 @@ Deno.test("randomBotUsername", async (t) => {
     });
   });
 
-  await t.step("should handle very short input", () => {
+  await t.step(" handle very short input", () => {
     using numberStub = stub(faker.random, "number", returnsNext([5]));
     using wordStub = stub(faker.random, "word", returnsNext(["a", "valid"]));
     using booleanStub = stub(faker.random, "boolean", returnsNext([true]));
@@ -225,7 +225,7 @@ Deno.test("randomBotUsername", async (t) => {
     assertEquals(
       username.length >= 5,
       true,
-      `Username should be at least 5 characters long (${username})`,
+      `Username  be at least 5 characters long (${username})`,
     );
     assertSpyCalls(wordStub, 2);
     assertEquals(username, "ValidBot");
@@ -242,7 +242,7 @@ Deno.test("randomBotUsername", async (t) => {
 
 Deno.test("randomInitData", async (t) => {
   await t.step(
-    "should generate valid init data with stubbed values",
+    " generate valid init data with stubbed values",
     async () => {
       const now = 1234567890;
       globalThis.Date.now = () => now * 1000;
@@ -345,7 +345,7 @@ Deno.test("randomInitData", async (t) => {
     },
   );
 
-  await t.step("should generate unique data each time", async () => {
+  await t.step(" generate unique data each time", async () => {
     using alphaNumericStub = stub(
       faker.random,
       "alphaNumeric",
@@ -401,7 +401,7 @@ Deno.test("randomInitData", async (t) => {
     await validator.validate(initData2);
   });
 
-  await t.step("should handle special characters in user data", async () => {
+  await t.step(" handle special characters in user data", async () => {
     using _alphaNumericStub = stub(
       faker.random,
       "alphaNumeric",
@@ -451,7 +451,7 @@ Deno.test("randomInitData", async (t) => {
     assertEquals(user.username, "john.doe+test");
   });
 
-  await t.step("should work without bot_token parameter", async () => {
+  await t.step(" work without bot_token parameter", async () => {
     using _alphaNumericStub = stub(
       faker.random,
       "alphaNumeric",
@@ -497,7 +497,7 @@ Deno.test("randomInitData", async (t) => {
 });
 
 Deno.test("signInitData", async (t) => {
-  await t.step("should sign init data with provided values", async () => {
+  await t.step(" sign init data with provided values", async () => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const params = {
       user: {
@@ -536,7 +536,7 @@ Deno.test("signInitData", async (t) => {
     await validator.validate(initData);
   });
 
-  await t.step("should handle special characters in user data", async () => {
+  await t.step(" handle special characters in user data", async () => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const params = {
       user: {
@@ -565,7 +565,7 @@ Deno.test("signInitData", async (t) => {
     assertEquals(user.username, "john.doe+test");
   });
 
-  await t.step("should generate same hash for same input", async () => {
+  await t.step(" generate same hash for same input", async () => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const params = {
       user: {
@@ -583,11 +583,11 @@ Deno.test("signInitData", async (t) => {
     const initData1 = await signInitData(botToken, params);
     const initData2 = await signInitData(botToken, params);
 
-    assertEquals(initData1, initData2, "Same input should produce same output");
+    assertEquals(initData1, initData2, "Same input  produce same output");
   });
 
   await t.step(
-    "should generate different hash for different bot tokens",
+    " generate different hash for different bot tokens",
     async () => {
       const params = {
         user: {
@@ -611,12 +611,12 @@ Deno.test("signInitData", async (t) => {
       assertNotEquals(
         initData1,
         initData2,
-        "Different tokens should produce different output",
+        "Different tokens  produce different output",
       );
     },
   );
 
-  await t.step("should accept pre-stringified user data", async () => {
+  await t.step(" accept pre-stringified user data", async () => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const userObj = {
       id: 123456789,
@@ -643,7 +643,7 @@ Deno.test("signInitData", async (t) => {
     assertEquals(urlParams.get("user"), JSON.stringify(userObj));
   });
 
-  await t.step("should handle pre-encoded user string", async () => {
+  await t.step(" handle pre-encoded user string", async () => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const userString = encodeURIComponent(JSON.stringify({
       id: 123456789,
@@ -671,7 +671,7 @@ Deno.test("signInitData", async (t) => {
   });
 
   await t.step(
-    "should produce same hash for equivalent object and string input",
+    " produce same hash for equivalent object and string input",
     async () => {
       const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
       const userObj = {
@@ -701,40 +701,40 @@ Deno.test("signInitData", async (t) => {
       assertEquals(
         initData1,
         initData2,
-        "Object and string input should produce same output",
+        "Object and string input  produce same output",
       );
     },
   );
 });
 
 Deno.test("createSecret", async (t) => {
-  await t.step("should generate valid secret with default length", () => {
+  await t.step(" generate valid secret with default length", () => {
     const secret = createSecret();
     assertMatch(
       secret,
       /^[A-Za-z0-9_-]{256}$/,
-      `Secret should only contain allowed characters and be 256 chars long (${secret})`,
+      `Secret  only contain allowed characters and be 256 chars long (${secret})`,
     );
   });
 
-  await t.step("should generate valid secret with custom length", () => {
+  await t.step(" generate valid secret with custom length", () => {
     const lengths = [1, 16, 32, 128, 256];
     for (const length of lengths) {
       const secret = createSecret(length);
       assertMatch(
         secret,
         /^[A-Za-z0-9_-]+$/,
-        `Secret should only contain allowed characters (${secret})`,
+        `Secret  only contain allowed characters (${secret})`,
       );
       assertEquals(
         secret.length,
         length,
-        `Secret length should match specified length (got ${secret.length}, expected ${length})`,
+        `Secret length  match specified length (got ${secret.length}, expected ${length})`,
       );
     }
   });
 
-  await t.step("should generate unique secrets", () => {
+  await t.step(" generate unique secrets", () => {
     const secret1 = createSecret();
     const secret2 = createSecret();
     const secret3 = createSecret();
@@ -742,21 +742,21 @@ Deno.test("createSecret", async (t) => {
     assertNotEquals(
       secret1,
       secret2,
-      "Consecutive secrets should be different",
+      "Consecutive secrets  be different",
     );
     assertNotEquals(
       secret2,
       secret3,
-      "Consecutive secrets should be different",
+      "Consecutive secrets  be different",
     );
     assertNotEquals(
       secret1,
       secret3,
-      "Consecutive secrets should be different",
+      "Consecutive secrets  be different",
     );
   });
 
-  await t.step("should use cryptographically secure random values", () => {
+  await t.step(" use cryptographically secure random values", () => {
     const mockValues = new Uint8Array([65, 66, 67]); // ABC
     using randomStub = stub(
       crypto,
@@ -776,7 +776,7 @@ Deno.test("createSecret", async (t) => {
 });
 
 Deno.test("signOAuthUser", async (t) => {
-  await t.step("should sign user data with provided values", async () => {
+  await t.step(" sign user data with provided values", async () => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const user: Omit<TelegramOAuthUser, "hash"> = {
       id: 123456789,
@@ -805,7 +805,7 @@ Deno.test("signOAuthUser", async (t) => {
     await validator.validate(signedData);
   });
 
-  await t.step("should handle special characters in user data", async () => {
+  await t.step(" handle special characters in user data", async () => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const user: Omit<TelegramOAuthUser, "hash"> = {
       id: 123456789,
@@ -828,7 +828,7 @@ Deno.test("signOAuthUser", async (t) => {
     await validator.validate(signedData);
   });
 
-  await t.step("should generate same hash for same input", async () => {
+  await t.step(" generate same hash for same input", async () => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const user: Omit<TelegramOAuthUser, "hash"> = {
       id: 123456789,
@@ -845,12 +845,12 @@ Deno.test("signOAuthUser", async (t) => {
     assertEquals(
       signedData1.hash,
       signedData2.hash,
-      "Same input should produce same hash",
+      "Same input  produce same hash",
     );
   });
 
   await t.step(
-    "should generate different hash for different bot tokens",
+    " generate different hash for different bot tokens",
     async () => {
       const user: Omit<TelegramOAuthUser, "hash"> = {
         id: 123456789,
@@ -870,12 +870,12 @@ Deno.test("signOAuthUser", async (t) => {
       assertNotEquals(
         signedData1.hash,
         signedData2.hash,
-        "Different tokens should produce different hashes",
+        "Different tokens  produce different hashes",
       );
     },
   );
 
-  await t.step("should handle null and undefined values", async () => {
+  await t.step(" handle null and undefined values", async () => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const user = {
       id: 123456789,
@@ -889,8 +889,8 @@ Deno.test("signOAuthUser", async (t) => {
     const signedData = await signOAuthUser(botToken, user);
 
     // Verify null and undefined fields are omitted
-    assert(!("last_name" in signedData), "Undefined fields should be omitted");
-    assert(!("username" in signedData), "Undefined fields should be omitted");
+    assert(!("last_name" in signedData), "Undefined fields  be omitted");
+    assert(!("username" in signedData), "Undefined fields  be omitted");
 
     // Verify the data is valid
     const validator = tgtb(botToken).oauth;
@@ -900,7 +900,7 @@ Deno.test("signOAuthUser", async (t) => {
 
 Deno.test("randomOAuthUser", async (t) => {
   await t.step(
-    "should generate valid user data with stubbed values",
+    " generate valid user data with stubbed values",
     async () => {
       const now = 1234567890;
       globalThis.Date.now = () => now * 1000;
@@ -973,7 +973,7 @@ Deno.test("randomOAuthUser", async (t) => {
     },
   );
 
-  await t.step("should generate unique data each time", async () => {
+  await t.step(" generate unique data each time", async () => {
     const now1 = 1234567890;
     const now2 = 1234567891;
     let currentTime = now1;
@@ -1035,7 +1035,7 @@ Deno.test("randomOAuthUser", async (t) => {
     await validator.validate(user2);
   });
 
-  await t.step("should work without bot_token parameter", async () => {
+  await t.step(" work without bot_token parameter", async () => {
     using _numberStub = stub(
       faker.random,
       "number",
@@ -1070,7 +1070,7 @@ Deno.test("randomOAuthUser", async (t) => {
   });
 
   await t.step(
-    "should handle special characters in generated data",
+    " handle special characters in generated data",
     async () => {
       using _numberStub = stub(
         faker.random,

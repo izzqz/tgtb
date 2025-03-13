@@ -9,8 +9,6 @@ lint:
 
 # format files
 fmt:
-    cargo fmt --all
-    cargo clippy --fix
     deno fmt
 
 # run tests for deno

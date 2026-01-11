@@ -1,6 +1,3 @@
 [submodule "lib/grammy-types"]
 	path = lib/grammy-types
 	url = git@github.com:grammyjs/types.git
-[submodule "lib/webapp-types"]
-	path = lib/webapp-types
-	url = git@github.com:DavisDmitry/telegram-webapps.git

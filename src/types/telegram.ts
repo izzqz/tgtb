@@ -1,11 +1,10 @@
 /**
  * Types for Telegram API, Login Widget, WebApp
- * Also exported from `@grammyjs/types` and `telegram-webapps`
+ * Also exported from `@grammyjs/types`
  * @module
  */
 
 export type * from "../../lib/grammy-types/mod.ts";
-export type * from "../../lib/webapp-types/src/index.d.ts";
 
 /**
  * User from [Telegram Login Widget](https://core.telegram.org/widgets/login)

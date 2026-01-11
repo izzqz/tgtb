@@ -68,6 +68,6 @@ export const createDataCheckString = (
  *
  * @internal
  */
-export const encode: TextEncoder["encode"] = TextEncoder.prototype.encode.bind(
-  new TextEncoder(),
-);
+export const encode = (input: string): Uint8Array<ArrayBuffer> => {
+  return new TextEncoder().encode(input) as Uint8Array<ArrayBuffer>;
+};

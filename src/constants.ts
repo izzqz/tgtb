@@ -12,7 +12,7 @@ export const TOKEN_CHARS =
 /**
  * "WebApp" as Uint8Array
  */
-export const WEB_APP_UINT8: Uint8Array = new Uint8Array([
+export const WEB_APP_UINT8: Uint8Array<ArrayBuffer> = new Uint8Array([
   87,
   101,
   98,

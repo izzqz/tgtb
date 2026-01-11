@@ -4,8 +4,8 @@
  * @module
  */
 
-export type * from "npm:@grammyjs/types@3";
-export type * from "npm:telegram-webapps@8";
+export type * from "../../lib/grammy-types/mod.ts";
+export type * from "../../lib/webapp-types/src/index.d.ts";
 
 /**
  * User from [Telegram Login Widget](https://core.telegram.org/widgets/login)

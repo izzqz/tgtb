@@ -1,14 +1,24 @@
 {
-  "version": "4",
+  "version": "5",
   "specifiers": {
     "jsr:@jackfiszr/faker@*": "1.1.6",
     "jsr:@jackfiszr/faker@1": "1.1.6",
+    "jsr:@jackfiszr/faker@^1.1.6": "1.1.6",
     "jsr:@std/assert@*": "1.0.11",
     "jsr:@std/assert@^1.0.10": "1.0.11",
+    "jsr:@std/assert@^1.0.15": "1.0.16",
+    "jsr:@std/assert@^1.0.16": "1.0.16",
+    "jsr:@std/async@^1.0.15": "1.0.16",
     "jsr:@std/async@^1.0.9": "1.0.11",
     "jsr:@std/data-structures@^1.0.6": "1.0.6",
+    "jsr:@std/data-structures@^1.0.9": "1.0.9",
+    "jsr:@std/fs@^1.0.19": "1.0.21",
+    "jsr:@std/internal@^1.0.12": "1.0.12",
     "jsr:@std/internal@^1.0.5": "1.0.5",
+    "jsr:@std/path@^1.1.2": "1.1.4",
+    "jsr:@std/path@^1.1.4": "1.1.4",
     "jsr:@std/testing@*": "1.0.9",
+    "jsr:@std/testing@^1.0.16": "1.0.16",
     "npm:@grammyjs/types@3": "3.19.0",
     "npm:telegram-webapps@8": "8.0.4"
   },
@@ -19,25 +29,63 @@
     "@std/assert@1.0.11": {
       "integrity": "2461ef3c368fe88bc60e186e7744a93112f16fd110022e113a0849e94d1c83c1",
       "dependencies": [
-        "jsr:@std/internal"
+        "jsr:@std/internal@^1.0.5"
+      ]
+    },
+    "@std/assert@1.0.16": {
+      "integrity": "6a7272ed1eaa77defe76e5ff63ca705d9c495077e2d5fd0126d2b53fc5bd6532",
+      "dependencies": [
+        "jsr:@std/internal@^1.0.12"
       ]
     },
     "@std/async@1.0.11": {
       "integrity": "eee0d3405275506638a9c8efaa849cf0d35873120c69b7caa1309c9a9e5b6f85"
     },
+    "@std/async@1.0.16": {
+      "integrity": "6c9e43035313b67b5de43e2b3ee3eadb39a488a0a0a3143097f112e025d3ee9a"
+    },
     "@std/data-structures@1.0.6": {
       "integrity": "76a7fd8080c66604c0496220a791860492ab21a04a63a969c0b9a0609bbbb760"
     },
+    "@std/data-structures@1.0.9": {
+      "integrity": "033d6e17e64bf1f84a614e647c1b015fa2576ae3312305821e1a4cb20674bb4d"
+    },
+    "@std/fs@1.0.21": {
+      "integrity": "d720fe1056d78d43065a4d6e0eeb2b19f34adb8a0bc7caf3a4dbf1d4178252cd",
+      "dependencies": [
+        "jsr:@std/path@^1.1.4"
+      ]
+    },
     "@std/internal@1.0.5": {
       "integrity": "54a546004f769c1ac9e025abd15a76b6671ddc9687e2313b67376125650dc7ba"
+    },
+    "@std/internal@1.0.12": {
+      "integrity": "972a634fd5bc34b242024402972cd5143eac68d8dffaca5eaa4dba30ce17b027"
+    },
+    "@std/path@1.1.4": {
+      "integrity": "1d2d43f39efb1b42f0b1882a25486647cb851481862dc7313390b2bb044314b5",
+      "dependencies": [
+        "jsr:@std/internal@^1.0.12"
+      ]
     },
     "@std/testing@1.0.9": {
       "integrity": "9bdd4ac07cb13e7594ac30e90f6ceef7254ac83a9aeaa089be0008f33aab5cd4",
       "dependencies": [
         "jsr:@std/assert@^1.0.10",
-        "jsr:@std/async",
-        "jsr:@std/data-structures",
-        "jsr:@std/internal"
+        "jsr:@std/async@^1.0.9",
+        "jsr:@std/data-structures@^1.0.6",
+        "jsr:@std/internal@^1.0.5"
+      ]
+    },
+    "@std/testing@1.0.16": {
+      "integrity": "a917ffdeb5924c9be436dc78bc32e511760e14d3a96e49c607fc5ecca86d0092",
+      "dependencies": [
+        "jsr:@std/assert@^1.0.15",
+        "jsr:@std/async@^1.0.15",
+        "jsr:@std/data-structures@^1.0.9",
+        "jsr:@std/fs",
+        "jsr:@std/internal@^1.0.12",
+        "jsr:@std/path@^1.1.2"
       ]
     }
   },
@@ -48,5 +96,12 @@
     "telegram-webapps@8.0.4": {
       "integrity": "sha512-COjSOSfAvtn+EsFVe/zar5U0QQ0mLavpl66P9gKjoJacozHmbqSvcA+pYRx7JstXH1H1BbEZXoK02RGlLbLPUA=="
     }
+  },
+  "workspace": {
+    "dependencies": [
+      "jsr:@jackfiszr/faker@^1.1.6",
+      "jsr:@std/assert@^1.0.16",
+      "jsr:@std/testing@^1.0.16"
+    ]
   }
 }

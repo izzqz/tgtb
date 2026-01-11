@@ -1,6 +1,6 @@
-import { assertEquals, assertRejects } from "jsr:@std/assert";
+import { assertEquals, assertRejects } from "@std/assert";
 import tgtb from "@izzqz/tgtb";
-import { FakeTime } from "jsr:@std/testing/time";
+import { FakeTime } from "@std/testing/time";
 import { randomOAuthUser, signOAuthUser } from "../src/utils/test-utils.ts";
 import type { TelegramOAuthUser } from "../src/types/telegram.ts";
 

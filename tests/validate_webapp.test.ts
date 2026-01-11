@@ -1,6 +1,7 @@
-import { assertEquals, assertRejects } from "jsr:@std/assert";
+import { assertEquals, assertRejects } from "@std/assert";
+import { FakeTime } from "@std/testing/time";
+
 import tgtb from "@izzqz/tgtb";
-import { FakeTime } from "jsr:@std/testing/time";
 import { randomInitData, signInitData } from "../src/utils/test-utils.ts";
 
 const BOT_TOKEN = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";

@@ -27,7 +27,7 @@
  * @module
  */
 
-import { faker } from "jsr:@jackfiszr/faker@1";
+import { faker } from "@jackfiszr/faker";
 import { TOKEN_CHARS } from "../constants.ts";
 import type { TelegramOAuthUser } from "../types/telegram.ts";
 /**

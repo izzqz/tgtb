@@ -1,6 +1,6 @@
 // deno-lint-ignore-file require-await
-import { assertEquals, assertRejects } from "jsr:@std/assert";
-import { beforeEach, describe, it } from "jsr:@std/testing/bdd";
+import { assertEquals, assertRejects } from "@std/assert";
+import { beforeEach, describe, it } from "@std/testing/bdd";
 
 import tgtb, { type Client } from "@izzqz/tgtb";
 import type { ApiError } from "@izzqz/tgtb/types";

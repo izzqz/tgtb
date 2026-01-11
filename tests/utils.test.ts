@@ -3,15 +3,15 @@ import {
   assertEquals,
   assertMatch,
   assertNotEquals,
-} from "jsr:@std/assert";
+} from "@std/assert";
 
-import { faker } from "jsr:@jackfiszr/faker";
+import { faker } from "@jackfiszr/faker";
 import {
   assertSpyCall,
   assertSpyCalls,
   returnsNext,
   stub,
-} from "jsr:@std/testing/mock";
+} from "@std/testing/mock";
 
 import {
   createSecret,

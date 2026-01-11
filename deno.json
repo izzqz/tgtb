@@ -11,7 +11,8 @@
   "publish": {
     "include": [
       "src/**/*",
-      "lib/**/*"
+      "lib/grammy-types/*.ts",
+      "lib/webapp-types/src/*.ts"
     ]
   },
   "imports": {

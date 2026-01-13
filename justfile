@@ -1,6 +1,10 @@
 _default:
     @just --list
 
+prepare:
+    git submodule update --init --recursive
+    deno cache .
+
 # lint and type check
 lint:
     deno check src --all --doc

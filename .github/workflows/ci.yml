@@ -39,7 +39,7 @@ jobs:
           restore-keys: ${{ runner.os }}-lint-deps-
 
       - name: Run linting
-        run: just lint
+        run: just prepare lint
 
   test:
     runs-on: ubuntu-latest
@@ -62,5 +62,10 @@ jobs:
           key: ${{ runner.os }}-test-deps-${{ hashFiles('**/Cargo.lock', '**/deno.lock') }}
           restore-keys: ${{ runner.os }}-test-deps-
 
+      - name: Install just
+        uses: taiki-e/install-action@v2
+        with:
+          tool: just
+
       - name: Run tests
-        run: deno test --trace-leaks --check --parallel --reporter=pretty
+        run: just prepare test

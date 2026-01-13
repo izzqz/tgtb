@@ -14,12 +14,8 @@ jobs:
         with:
           ref: ${{ github.event.release.tag_name }}
 
-      - name: Install just
-        uses: taiki-e/install-action@v2
-        with:
-          tool: just
-
-      - run: just prepare
+      - name: Install submodules
+        run: git submodule update --init --recursive
 
       - name: Publish package
         run: npx jsr publish

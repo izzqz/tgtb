@@ -3,9 +3,9 @@ _default:
 
 # lint and type check
 lint:
-    deno check . --all --doc
-    deno lint
-    deno fmt --check
+    deno check src --all --doc
+    deno lint src
+    deno fmt --check src
 
 # format files
 fmt:

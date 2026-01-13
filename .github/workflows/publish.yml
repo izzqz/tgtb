@@ -1,14 +1,10 @@
 name: Publish
 on:
-  workflow_run:
-    workflows: ["ci"]
-    branches: [main]
-    types:
-      - completed
+  release:
+    types: [published]
 
 jobs:
   publish:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -16,7 +12,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Install just
+        uses: taiki-e/install-action@v2
+        with:
+          tool: just
+
+      - run: just prepare
 
       - name: Publish package
         run: npx jsr publish

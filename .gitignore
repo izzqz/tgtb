@@ -1,9 +1,2 @@
-/target
-/docs
-
-# Coverage data
-/coverage/
-*.profraw
-*.profdata
-*.gcda
-*.gcno
+node_modules/
+dist/

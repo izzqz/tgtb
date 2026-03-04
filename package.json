@@ -1,0 +1,28 @@
+{
+  "name": "@izzqz/tgtb",
+  "version": "0.1.8",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": { "import": "./dist/mod.js", "types": "./dist/mod.d.ts" },
+    "./types": {
+      "import": "./dist/types/telegram.js",
+      "types": "./dist/types/telegram.d.ts"
+    },
+    "./utils": {
+      "import": "./dist/utils/mod.js",
+      "types": "./dist/utils/mod.d.ts"
+    },
+    "./constants": {
+      "import": "./dist/constants.js",
+      "types": "./dist/constants.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "packageManager": "pnpm@10.30.3",
+  "devDependencies": {
+    "@faker-js/faker": "^10.3.0",
+    "@grammyjs/types": "^3.25.0",
+    "typescript": "^5.0.0"
+  }
+}

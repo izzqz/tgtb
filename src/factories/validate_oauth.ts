@@ -1,4 +1,4 @@
-// import { create_oauth_validator } from "../../lib/tg_validator.js";
+// import { create_oauth_validator } from "../../lib/tg_validator.ts";
 import type { TgtbConfig } from "../types/interface.ts";
 import type { TelegramOAuthUser } from "../types/telegram.ts";
 import { createDataCheckString, encode, importHMAC } from "../utils/crypto.ts";

@@ -4,6 +4,9 @@ _default:
 prepare:
     pnpm install
 
+test:
+    node --test
+
 lint:
     pnpm exec tsc --noEmit
 

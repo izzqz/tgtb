@@ -1,17 +1,7 @@
-import {
-  assert,
-  assertEquals,
-  assertMatch,
-  assertNotEquals,
-} from "@std/assert";
+import assert from "node:assert/strict";
+import { test } from "node:test";
 
-import { faker } from "@jackfiszr/faker";
-import {
-  assertSpyCall,
-  assertSpyCalls,
-  returnsNext,
-  stub,
-} from "@std/testing/mock";
+import { faker } from "@faker-js/faker";
 
 import {
   createSecret,
@@ -22,32 +12,35 @@ import {
   randomOAuthUser,
   signInitData,
   signOAuthUser,
-} from "@izzqz/tgtb/utils";
-import tgtb from "@izzqz/tgtb";
+} from "../src/utils/mod.ts";
+import tgtb from "../src/mod.ts";
 import type { TelegramOAuthUser } from "../src/types/telegram.ts";
 
-Deno.test("randomBotToken", async (t) => {
-  await t.step(" generate valid bot token", () => {
-    using numberStub = stub(faker.random, "number", returnsNext([12345678]));
-    using elementStub = stub(
-      faker.random,
+function returnsNext<T>(values: T[]): (..._args: unknown[]) => T {
+  const remaining = [...values];
+  return () => remaining.shift()!;
+}
+
+test("randomBotToken", async (t) => {
+  await t.test(" generate valid bot token", (t) => {
+    const numberStub = t.mock.method(faker.number, "int", returnsNext([12345678]));
+    const elementStub = t.mock.method(
+      faker.helpers,
       "arrayElement",
       returnsNext(Array(35).fill("a")),
     );
 
     const botToken = randomBotToken();
-    assertMatch(botToken, /^[0-9]{8,10}:[a-zA-Z0-9_-]{35}$/);
+    assert.match(botToken, /^[0-9]{8,10}:[a-zA-Z0-9_-]{35}$/);
 
-    assertSpyCall(numberStub, 0, {
-      args: [{ min: 10000000, max: 9999999999 }],
-      returned: 12345678,
-    });
-    assertSpyCalls(elementStub, 35);
+    assert.deepStrictEqual(numberStub.mock.calls[0].arguments, [{ min: 10000000, max: 9999999999 }]);
+    assert.strictEqual(numberStub.mock.calls[0].result, 12345678);
+    assert.strictEqual(elementStub.mock.callCount(), 35);
   });
 
-  await t.step("use provided bot_id", () => {
-    using elementStub = stub(
-      faker.random,
+  await t.test("use provided bot_id", (t) => {
+    const elementStub = t.mock.method(
+      faker.helpers,
       "arrayElement",
       returnsNext(Array(35).fill("a")),
     );
@@ -55,230 +48,200 @@ Deno.test("randomBotToken", async (t) => {
     const botId = 12345678;
     const botToken = randomBotToken(botId);
 
-    assertEquals(
+    assert.deepStrictEqual(
       botToken.split(":")[0],
       botId.toString(),
       `Token start with provided bot_id (${botToken})`,
     );
-    assertMatch(
+    assert.match(
       botToken,
       /^[0-9]{8,10}:[a-zA-Z0-9_-]{35}$/,
       `Token format  be valid (${botToken})`,
     );
 
-    assertSpyCalls(elementStub, 35);
+    assert.strictEqual(elementStub.mock.callCount(), 35);
   });
 });
 
-Deno.test("randomBotId", async (t) => {
-  await t.step(" generate valid bot id", () => {
-    using numberStub = stub(faker.random, "number", returnsNext([12345678]));
+test("randomBotId", async (t) => {
+  await t.test(" generate valid bot id", (t) => {
+    const numberStub = t.mock.method(faker.number, "int", returnsNext([12345678]));
 
     const botId = randomBotId();
-    assertMatch(
+    assert.match(
       botId.toString(),
       /^[0-9]{8,10}$/,
       `Bot ID  be 8-10 digits (${botId})`,
     );
 
-    assertSpyCall(numberStub, 0, {
-      args: [{ min: 10000000, max: 9999999999 }],
-      returned: 12345678,
-    });
+    assert.deepStrictEqual(numberStub.mock.calls[0].arguments, [{ min: 10000000, max: 9999999999 }]);
+    assert.strictEqual(numberStub.mock.calls[0].result, 12345678);
   });
 
-  await t.step("generate id within valid range", () => {
+  await t.test("generate id within valid range", (t) => {
     const testValues = [10000000, 9999999999, 123456789];
-    using numberStub = stub(faker.random, "number", returnsNext(testValues));
+    const numberStub = t.mock.method(faker.number, "int", returnsNext(testValues));
 
     for (const expected of testValues) {
       const botId = randomBotId();
-      assertEquals(
+      assert.deepStrictEqual(
         botId,
         expected,
         `Bot ID  match expected value (got ${botId}, expected ${expected})`,
       );
     }
 
-    assertSpyCalls(numberStub, testValues.length);
+    assert.strictEqual(numberStub.mock.callCount(), testValues.length);
   });
 });
 
-Deno.test("randomBotUsername", async (t) => {
-  await t.step("generate valid username with CamelCase", () => {
-    using numberStub = stub(faker.random, "number", returnsNext([10]));
-    using wordStub = stub(faker.random, "word", returnsNext(["testname"]));
-    using booleanStub = stub(faker.random, "boolean", returnsNext([true]));
+test("randomBotUsername", async (t) => {
+  await t.test("generate valid username with CamelCase", (t) => {
+    const numberStub = t.mock.method(faker.number, "int", returnsNext([10]));
+    const wordStub = t.mock.method(faker.lorem, "word", returnsNext(["testname"]));
+    const booleanStub = t.mock.method(faker.datatype, "boolean", returnsNext([true]));
 
     const username = randomBotUsername();
 
-    assertEquals(username, "TestnameBot");
-    assertSpyCall(numberStub, 0, {
-      args: [{ min: 2, max: 28 }],
-      returned: 10,
-    });
-    assertSpyCall(wordStub, 0, {
-      args: [],
-      returned: "testname",
-    });
-    assertSpyCall(booleanStub, 0, {
-      args: [],
-      returned: true,
-    });
+    assert.deepStrictEqual(username, "TestnameBot");
+    assert.deepStrictEqual(numberStub.mock.calls[0].arguments, [{ min: 2, max: 28 }]);
+    assert.strictEqual(numberStub.mock.calls[0].result, 10);
+    assert.deepStrictEqual(wordStub.mock.calls[0].arguments, []);
+    assert.strictEqual(wordStub.mock.calls[0].result, "testname");
+    assert.deepStrictEqual(booleanStub.mock.calls[0].arguments, []);
+    assert.strictEqual(booleanStub.mock.calls[0].result, true);
   });
 
-  await t.step("generate valid username with snake_case", () => {
-    using numberStub = stub(faker.random, "number", returnsNext([10]));
-    using wordStub = stub(faker.random, "word", returnsNext(["testname"]));
-    using booleanStub = stub(faker.random, "boolean", returnsNext([false]));
+  await t.test("generate valid username with snake_case", (t) => {
+    const numberStub = t.mock.method(faker.number, "int", returnsNext([10]));
+    const wordStub = t.mock.method(faker.lorem, "word", returnsNext(["testname"]));
+    const booleanStub = t.mock.method(faker.datatype, "boolean", returnsNext([false]));
 
     const username = randomBotUsername();
 
-    assertEquals(username, "testname_bot");
-    assertSpyCall(numberStub, 0, {
-      args: [{ min: 2, max: 28 }],
-      returned: 10,
-    });
-    assertSpyCall(wordStub, 0, {
-      args: [],
-      returned: "testname",
-    });
-    assertSpyCall(booleanStub, 0, {
-      args: [],
-      returned: false,
-    });
+    assert.deepStrictEqual(username, "testname_bot");
+    assert.deepStrictEqual(numberStub.mock.calls[0].arguments, [{ min: 2, max: 28 }]);
+    assert.strictEqual(numberStub.mock.calls[0].result, 10);
+    assert.deepStrictEqual(wordStub.mock.calls[0].arguments, []);
+    assert.strictEqual(wordStub.mock.calls[0].result, "testname");
+    assert.deepStrictEqual(booleanStub.mock.calls[0].arguments, []);
+    assert.strictEqual(booleanStub.mock.calls[0].result, false);
   });
 
-  await t.step("handle non-alphanumeric input", () => {
-    using numberStub = stub(faker.random, "number", returnsNext([10]));
-    using wordStub = stub(
-      faker.random,
+  await t.test("handle non-alphanumeric input", (t) => {
+    const numberStub = t.mock.method(faker.number, "int", returnsNext([10]));
+    const wordStub = t.mock.method(
+      faker.lorem,
       "word",
       returnsNext(["Test@#$%^&*()User"]),
     );
-    using booleanStub = stub(faker.random, "boolean", returnsNext([true]));
+    const booleanStub = t.mock.method(faker.datatype, "boolean", returnsNext([true]));
 
     const username = randomBotUsername();
 
-    assertMatch(
+    assert.match(
       username,
       /^[A-Za-z0-9]+Bot$/,
       `Username  be valid even with non-alphanumeric input (${username})`,
     );
-    assertEquals(username, "TestuserBot");
-    assertSpyCall(numberStub, 0, {
-      args: [{ min: 2, max: 28 }],
-      returned: 10,
-    });
-    assertSpyCall(wordStub, 0, {
-      args: [],
-      returned: "Test@#$%^&*()User",
-    });
-    assertSpyCall(booleanStub, 0, {
-      args: [],
-      returned: true,
-    });
+    assert.deepStrictEqual(username, "TestuserBot");
+    assert.deepStrictEqual(numberStub.mock.calls[0].arguments, [{ min: 2, max: 28 }]);
+    assert.strictEqual(numberStub.mock.calls[0].result, 10);
+    assert.deepStrictEqual(wordStub.mock.calls[0].arguments, []);
+    assert.strictEqual(wordStub.mock.calls[0].result, "Test@#$%^&*()User");
+    assert.deepStrictEqual(booleanStub.mock.calls[0].arguments, []);
+    assert.strictEqual(booleanStub.mock.calls[0].result, true);
   });
 
-  await t.step("handle maximum length input", () => {
-    using numberStub = stub(faker.random, "number", returnsNext([28]));
-    using wordStub = stub(
-      faker.random,
+  await t.test("handle maximum length input", (t) => {
+    const numberStub = t.mock.method(faker.number, "int", returnsNext([28]));
+    const wordStub = t.mock.method(
+      faker.lorem,
       "word",
       returnsNext([Array(50).fill("a").join("")]),
     );
-    using booleanStub = stub(faker.random, "boolean", returnsNext([true]));
+    const booleanStub = t.mock.method(faker.datatype, "boolean", returnsNext([true]));
 
     const username = randomBotUsername();
 
-    assertEquals(
+    assert.deepStrictEqual(
       username.length <= 32,
       true,
       `Username  not exceed 32 characters (${username})`,
     );
-    assertEquals(
+    assert.deepStrictEqual(
       username.toLowerCase().endsWith("bot"),
       true,
       `Username  end with 'bot' (${username})`,
     );
-    assertSpyCall(numberStub, 0, {
-      args: [{ min: 2, max: 28 }],
-      returned: 28,
-    });
-    assertSpyCall(wordStub, 0, {
-      args: [],
-      returned: "a".repeat(50),
-    });
-    assertSpyCall(booleanStub, 0, {
-      args: [],
-      returned: true,
-    });
+    assert.deepStrictEqual(numberStub.mock.calls[0].arguments, [{ min: 2, max: 28 }]);
+    assert.strictEqual(numberStub.mock.calls[0].result, 28);
+    assert.deepStrictEqual(wordStub.mock.calls[0].arguments, []);
+    assert.strictEqual(wordStub.mock.calls[0].result, "a".repeat(50));
+    assert.deepStrictEqual(booleanStub.mock.calls[0].arguments, []);
+    assert.strictEqual(booleanStub.mock.calls[0].result, true);
   });
 
-  await t.step("handle very short input", () => {
-    using numberStub = stub(faker.random, "number", returnsNext([5]));
-    using wordStub = stub(faker.random, "word", returnsNext(["a", "valid"]));
-    using booleanStub = stub(faker.random, "boolean", returnsNext([true]));
+  await t.test("handle very short input", (t) => {
+    const numberStub = t.mock.method(faker.number, "int", returnsNext([5]));
+    const wordStub = t.mock.method(faker.lorem, "word", returnsNext(["a", "valid"]));
+    const booleanStub = t.mock.method(faker.datatype, "boolean", returnsNext([true]));
 
     const username = randomBotUsername();
 
-    assertEquals(
+    assert.deepStrictEqual(
       username.length >= 5,
       true,
       `Username  be at least 5 characters long (${username})`,
     );
-    assertSpyCalls(wordStub, 2);
-    assertEquals(username, "ValidBot");
-    assertSpyCall(numberStub, 0, {
-      args: [{ min: 2, max: 28 }],
-      returned: 5,
-    });
-    assertSpyCall(booleanStub, 0, {
-      args: [],
-      returned: true,
-    });
+    assert.strictEqual(wordStub.mock.callCount(), 2);
+    assert.deepStrictEqual(username, "ValidBot");
+    assert.deepStrictEqual(numberStub.mock.calls[0].arguments, [{ min: 2, max: 28 }]);
+    assert.strictEqual(numberStub.mock.calls[0].result, 5);
+    assert.deepStrictEqual(booleanStub.mock.calls[0].arguments, []);
+    assert.strictEqual(booleanStub.mock.calls[0].result, true);
   });
 });
 
-Deno.test("randomInitData", async (t) => {
-  await t.step(
+test("randomInitData", async (t) => {
+  await t.test(
     "generate valid init data with stubbed values",
-    async () => {
+    async (t) => {
       const now = 1234567890;
       globalThis.Date.now = () => now * 1000;
 
-      using alphaNumericStub = stub(
-        faker.random,
-        "alphaNumeric",
+      const alphaNumericStub = t.mock.method(
+        faker.string,
+        "alphanumeric",
         returnsNext(["ABC123XYZ"]),
       );
-      using numberStub = stub(
-        faker.random,
-        "number",
+      const numberStub = t.mock.method(
+        faker.number,
+        "int",
         returnsNext([123456789]),
       );
-      using firstNameStub = stub(
-        faker.name,
+      const firstNameStub = t.mock.method(
+        faker.person,
         "firstName",
         returnsNext(["John"]),
       );
-      using lastNameStub = stub(
-        faker.name,
+      const lastNameStub = t.mock.method(
+        faker.person,
         "lastName",
         returnsNext(["Doe"]),
       );
-      using userNameStub = stub(
+      const userNameStub = t.mock.method(
         faker.internet,
-        "userName",
+        "username",
         returnsNext(["johndoe"]),
       );
-      using arrayElementStub = stub(
-        faker.random,
+      const arrayElementStub = t.mock.method(
+        faker.helpers,
         "arrayElement",
         returnsNext(["en"]),
       );
-      using booleanStub = stub(
-        faker.random,
+      const booleanStub = t.mock.method(
+        faker.datatype,
         "boolean",
         returnsNext([true]),
       );
@@ -287,47 +250,33 @@ Deno.test("randomInitData", async (t) => {
       const initData = await randomInitData(botToken);
 
       // Verify all faker calls
-      assertSpyCall(alphaNumericStub, 0, {
-        args: [20],
-        returned: "ABC123XYZ",
-      });
-      assertSpyCall(numberStub, 0, {
-        args: [{ min: 10000000, max: 999999999 }],
-        returned: 123456789,
-      });
-      assertSpyCall(firstNameStub, 0, {
-        args: [],
-        returned: "John",
-      });
-      assertSpyCall(lastNameStub, 0, {
-        args: [],
-        returned: "Doe",
-      });
-      assertSpyCall(userNameStub, 0, {
-        args: [],
-        returned: "johndoe",
-      });
-      assertSpyCall(arrayElementStub, 0, {
-        args: [["en", "ru", "es", "de"]],
-        returned: "en",
-      });
-      assertSpyCall(booleanStub, 0, {
-        args: [],
-        returned: true,
-      });
+      assert.deepStrictEqual(alphaNumericStub.mock.calls[0].arguments, [20]);
+      assert.strictEqual(alphaNumericStub.mock.calls[0].result, "ABC123XYZ");
+      assert.deepStrictEqual(numberStub.mock.calls[0].arguments, [{ min: 10000000, max: 999999999 }]);
+      assert.strictEqual(numberStub.mock.calls[0].result, 123456789);
+      assert.deepStrictEqual(firstNameStub.mock.calls[0].arguments, []);
+      assert.strictEqual(firstNameStub.mock.calls[0].result, "John");
+      assert.deepStrictEqual(lastNameStub.mock.calls[0].arguments, []);
+      assert.strictEqual(lastNameStub.mock.calls[0].result, "Doe");
+      assert.deepStrictEqual(userNameStub.mock.calls[0].arguments, []);
+      assert.strictEqual(userNameStub.mock.calls[0].result, "johndoe");
+      assert.deepStrictEqual(arrayElementStub.mock.calls[0].arguments, [["en", "ru", "es", "de"]]);
+      assert.strictEqual(arrayElementStub.mock.calls[0].result, "en");
+      assert.deepStrictEqual(booleanStub.mock.calls[0].arguments, []);
+      assert.strictEqual(booleanStub.mock.calls[0].result, true);
 
       // Verify the generated init data structure
       const params = new URLSearchParams(initData);
 
       // Verify auth_date
-      assertEquals(params.get("auth_date"), "1234567890");
+      assert.deepStrictEqual(params.get("auth_date"), "1234567890");
 
       // Verify query_id
-      assertEquals(params.get("query_id"), "AAFABC123XYZ");
+      assert.deepStrictEqual(params.get("query_id"), "AAFABC123XYZ");
 
       // Verify user object
       const user = JSON.parse(params.get("user")!);
-      assertEquals(user, {
+      assert.deepStrictEqual(user, {
         id: 123456789,
         first_name: "John",
         last_name: "Doe",
@@ -338,46 +287,46 @@ Deno.test("randomInitData", async (t) => {
 
       // Verify hash is correct (64 hex chars)
       const hash = params.get("hash")!;
-      assertMatch(hash, /^[a-f0-9]{64}$/);
+      assert.match(hash, /^[a-f0-9]{64}$/);
 
       const validator = tgtb(botToken).init_data;
       await validator.validate(initData);
     },
   );
 
-  await t.step("generate unique data each time", async () => {
-    using alphaNumericStub = stub(
-      faker.random,
-      "alphaNumeric",
+  await t.test("generate unique data each time", async (t) => {
+    const alphaNumericStub = t.mock.method(
+      faker.string,
+      "alphanumeric",
       returnsNext(["ABC123", "XYZ789"]),
     );
-    using numberStub = stub(
-      faker.random,
-      "number",
+    const numberStub = t.mock.method(
+      faker.number,
+      "int",
       returnsNext([111111, 222222]),
     );
-    using firstNameStub = stub(
-      faker.name,
+    const firstNameStub = t.mock.method(
+      faker.person,
       "firstName",
       returnsNext(["Alice", "Bob"]),
     );
-    using lastNameStub = stub(
-      faker.name,
+    const lastNameStub = t.mock.method(
+      faker.person,
       "lastName",
       returnsNext(["Smith", "Jones"]),
     );
-    using userNameStub = stub(
+    const userNameStub = t.mock.method(
       faker.internet,
-      "userName",
+      "username",
       returnsNext(["alice", "bob"]),
     );
-    using arrayElementStub = stub(
-      faker.random,
+    const arrayElementStub = t.mock.method(
+      faker.helpers,
       "arrayElement",
       returnsNext(["en", "ru"]),
     );
-    using booleanStub = stub(
-      faker.random,
+    const booleanStub = t.mock.method(
+      faker.datatype,
       "boolean",
       returnsNext([true, false]),
     );
@@ -386,57 +335,29 @@ Deno.test("randomInitData", async (t) => {
     const initData1 = await randomInitData(botToken);
     const initData2 = await randomInitData(botToken);
 
-    assertNotEquals(initData1, initData2);
+    assert.notDeepStrictEqual(initData1, initData2);
 
     // Verify all stubs were called twice
-    assertSpyCalls(alphaNumericStub, 2);
-    assertSpyCalls(numberStub, 2);
-    assertSpyCalls(firstNameStub, 2);
-    assertSpyCalls(lastNameStub, 2);
-    assertSpyCalls(userNameStub, 2);
-    assertSpyCalls(arrayElementStub, 2);
-    assertSpyCalls(booleanStub, 2);
+    assert.strictEqual(alphaNumericStub.mock.callCount(), 2);
+    assert.strictEqual(numberStub.mock.callCount(), 2);
+    assert.strictEqual(firstNameStub.mock.callCount(), 2);
+    assert.strictEqual(lastNameStub.mock.callCount(), 2);
+    assert.strictEqual(userNameStub.mock.callCount(), 2);
+    assert.strictEqual(arrayElementStub.mock.callCount(), 2);
+    assert.strictEqual(booleanStub.mock.callCount(), 2);
     const validator = tgtb(botToken).init_data;
     await validator.validate(initData1);
     await validator.validate(initData2);
   });
 
-  await t.step("handle special characters in user data", async () => {
-    using _alphaNumericStub = stub(
-      faker.random,
-      "alphaNumeric",
-      returnsNext(["ABC123"]),
-    );
-    using _numberStub = stub(
-      faker.random,
-      "number",
-      returnsNext([123456789]),
-    );
-    using _firstNameStub = stub(
-      faker.name,
-      "firstName",
-      returnsNext(["John & Jane"]),
-    );
-    using _lastNameStub = stub(
-      faker.name,
-      "lastName",
-      returnsNext(["O'Doe=Smith"]),
-    );
-    using _userNameStub = stub(
-      faker.internet,
-      "userName",
-      returnsNext(["john.doe+test"]),
-    );
-    using _arrayElementStub = stub(
-      faker.random,
-      "arrayElement",
-      returnsNext(["en"]),
-    );
-    using _booleanStub = stub(
-      faker.random,
-      "boolean",
-      returnsNext([true]),
-    );
+  await t.test("handle special characters in user data", async (t) => {
+    t.mock.method(faker.string, "alphanumeric", returnsNext(["ABC123"]));
+    t.mock.method(faker.number, "int", returnsNext([123456789]));
+    t.mock.method(faker.person, "firstName", returnsNext(["John & Jane"]));
+    t.mock.method(faker.person, "lastName", returnsNext(["O'Doe=Smith"]));
+    t.mock.method(faker.internet, "username", returnsNext(["john.doe+test"]));
+    t.mock.method(faker.helpers, "arrayElement", returnsNext(["en"]));
+    t.mock.method(faker.datatype, "boolean", returnsNext([true]));
 
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const initData = await randomInitData(botToken);
@@ -446,47 +367,19 @@ Deno.test("randomInitData", async (t) => {
 
     const params = new URLSearchParams(initData);
     const user = JSON.parse(params.get("user")!);
-    assertEquals(user.first_name, "John & Jane");
-    assertEquals(user.last_name, "O'Doe=Smith");
-    assertEquals(user.username, "john.doe+test");
+    assert.deepStrictEqual(user.first_name, "John & Jane");
+    assert.deepStrictEqual(user.last_name, "O'Doe=Smith");
+    assert.deepStrictEqual(user.username, "john.doe+test");
   });
 
-  await t.step("work without bot_token parameter", async () => {
-    using _alphaNumericStub = stub(
-      faker.random,
-      "alphaNumeric",
-      returnsNext(["ABC123"]),
-    );
-    using _numberStub = stub(
-      faker.random,
-      "number",
-      returnsNext([123456789, 123456789]), // One for bot_id, one for user.id
-    );
-    using _arrayElementStub = stub(
-      faker.random,
-      "arrayElement",
-      returnsNext([...Array(35).fill("A"), "en"]),
-    );
-    using _firstNameStub = stub(
-      faker.name,
-      "firstName",
-      returnsNext(["John"]),
-    );
-    using _lastNameStub = stub(
-      faker.name,
-      "lastName",
-      returnsNext(["Doe"]),
-    );
-    using _userNameStub = stub(
-      faker.internet,
-      "userName",
-      returnsNext(["johndoe"]),
-    );
-    using _booleanStub = stub(
-      faker.random,
-      "boolean",
-      returnsNext([true]),
-    );
+  await t.test("work without bot_token parameter", async (t) => {
+    t.mock.method(faker.string, "alphanumeric", returnsNext(["ABC123"]));
+    t.mock.method(faker.number, "int", returnsNext([123456789, 123456789]));
+    t.mock.method(faker.helpers, "arrayElement", returnsNext([...Array(35).fill("A"), "en"]));
+    t.mock.method(faker.person, "firstName", returnsNext(["John"]));
+    t.mock.method(faker.person, "lastName", returnsNext(["Doe"]));
+    t.mock.method(faker.internet, "username", returnsNext(["johndoe"]));
+    t.mock.method(faker.datatype, "boolean", returnsNext([true]));
 
     const initData = await randomInitData();
     const expectedBotToken = "123456789:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
@@ -496,8 +389,8 @@ Deno.test("randomInitData", async (t) => {
   });
 });
 
-Deno.test("signInitData", async (t) => {
-  await t.step(" sign init data with provided values", async () => {
+test("signInitData", async (t) => {
+  await t.test(" sign init data with provided values", async () => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const params = {
       user: {
@@ -518,25 +411,25 @@ Deno.test("signInitData", async (t) => {
     const urlParams = new URLSearchParams(initData);
 
     // Verify auth_date
-    assertEquals(urlParams.get("auth_date"), "1234567890");
+    assert.deepStrictEqual(urlParams.get("auth_date"), "1234567890");
 
     // Verify query_id
-    assertEquals(urlParams.get("query_id"), "AAFABC123XYZ");
+    assert.deepStrictEqual(urlParams.get("query_id"), "AAFABC123XYZ");
 
     // Verify user object
     const user = JSON.parse(urlParams.get("user")!);
-    assertEquals(user, params.user);
+    assert.deepStrictEqual(user, params.user);
 
     // Verify hash is correct (64 hex chars)
     const hash = urlParams.get("hash")!;
-    assertMatch(hash, /^[a-f0-9]{64}$/);
+    assert.match(hash, /^[a-f0-9]{64}$/);
 
     // Verify the data is valid
     const validator = tgtb(botToken).init_data;
     await validator.validate(initData);
   });
 
-  await t.step("handle special characters in user data", async () => {
+  await t.test("handle special characters in user data", async () => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const params = {
       user: {
@@ -560,12 +453,12 @@ Deno.test("signInitData", async (t) => {
     // Verify user data is preserved
     const urlParams = new URLSearchParams(initData);
     const user = JSON.parse(urlParams.get("user")!);
-    assertEquals(user.first_name, "John & Jane");
-    assertEquals(user.last_name, "O'Doe=Smith");
-    assertEquals(user.username, "john.doe+test");
+    assert.deepStrictEqual(user.first_name, "John & Jane");
+    assert.deepStrictEqual(user.last_name, "O'Doe=Smith");
+    assert.deepStrictEqual(user.username, "john.doe+test");
   });
 
-  await t.step("generate same hash for same input", async () => {
+  await t.test("generate same hash for same input", async () => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const params = {
       user: {
@@ -583,10 +476,10 @@ Deno.test("signInitData", async (t) => {
     const initData1 = await signInitData(botToken, params);
     const initData2 = await signInitData(botToken, params);
 
-    assertEquals(initData1, initData2, "Same input  produce same output");
+    assert.deepStrictEqual(initData1, initData2, "Same input  produce same output");
   });
 
-  await t.step(
+  await t.test(
     "generate different hash for different bot tokens",
     async () => {
       const params = {
@@ -608,7 +501,7 @@ Deno.test("signInitData", async (t) => {
       const initData1 = await signInitData(botToken1, params);
       const initData2 = await signInitData(botToken2, params);
 
-      assertNotEquals(
+      assert.notDeepStrictEqual(
         initData1,
         initData2,
         "Different tokens  produce different output",
@@ -616,7 +509,7 @@ Deno.test("signInitData", async (t) => {
     },
   );
 
-  await t.step("accept pre-stringified user data", async () => {
+  await t.test("accept pre-stringified user data", async () => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const userObj = {
       id: 123456789,
@@ -640,10 +533,10 @@ Deno.test("signInitData", async (t) => {
 
     // Verify user data is preserved exactly as provided
     const urlParams = new URLSearchParams(initData);
-    assertEquals(urlParams.get("user"), JSON.stringify(userObj));
+    assert.deepStrictEqual(urlParams.get("user"), JSON.stringify(userObj));
   });
 
-  await t.step("handle pre-encoded user string", async () => {
+  await t.test("handle pre-encoded user string", async () => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const userString = encodeURIComponent(JSON.stringify({
       id: 123456789,
@@ -667,10 +560,10 @@ Deno.test("signInitData", async (t) => {
 
     // Verify user data is preserved exactly as provided
     const urlParams = new URLSearchParams(initData);
-    assertEquals(urlParams.get("user"), userString);
+    assert.deepStrictEqual(urlParams.get("user"), userString);
   });
 
-  await t.step(
+  await t.test(
     "produce same hash for equivalent object and string input",
     async () => {
       const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
@@ -698,7 +591,7 @@ Deno.test("signInitData", async (t) => {
       const initData1 = await signInitData(botToken, paramsWithObj);
       const initData2 = await signInitData(botToken, paramsWithString);
 
-      assertEquals(
+      assert.deepStrictEqual(
         initData1,
         initData2,
         "Object and string input  produce same output",
@@ -707,26 +600,26 @@ Deno.test("signInitData", async (t) => {
   );
 });
 
-Deno.test("createSecret", async (t) => {
-  await t.step(" generate valid secret with default length", () => {
+test("createSecret", async (t) => {
+  await t.test(" generate valid secret with default length", () => {
     const secret = createSecret();
-    assertMatch(
+    assert.match(
       secret,
       /^[A-Za-z0-9_-]{256}$/,
       `Secret  only contain allowed characters and be 256 chars long (${secret})`,
     );
   });
 
-  await t.step(" generate valid secret with custom length", () => {
+  await t.test(" generate valid secret with custom length", () => {
     const lengths = [1, 16, 32, 128, 256];
     for (const length of lengths) {
       const secret = createSecret(length);
-      assertMatch(
+      assert.match(
         secret,
         /^[A-Za-z0-9_-]+$/,
         `Secret  only contain allowed characters (${secret})`,
       );
-      assertEquals(
+      assert.deepStrictEqual(
         secret.length,
         length,
         `Secret length  match specified length (got ${secret.length}, expected ${length})`,
@@ -734,31 +627,31 @@ Deno.test("createSecret", async (t) => {
     }
   });
 
-  await t.step("generate unique secrets", () => {
+  await t.test("generate unique secrets", () => {
     const secret1 = createSecret();
     const secret2 = createSecret();
     const secret3 = createSecret();
 
-    assertNotEquals(
+    assert.notDeepStrictEqual(
       secret1,
       secret2,
       "Consecutive secrets  be different",
     );
-    assertNotEquals(
+    assert.notDeepStrictEqual(
       secret2,
       secret3,
       "Consecutive secrets  be different",
     );
-    assertNotEquals(
+    assert.notDeepStrictEqual(
       secret1,
       secret3,
       "Consecutive secrets  be different",
     );
   });
 
-  await t.step("use cryptographically secure random values", () => {
+  await t.test("use cryptographically secure random values", (t) => {
     const mockValues = new Uint8Array([65, 66, 67]); // ABC
-    using randomStub = stub(
+    const randomStub = t.mock.method(
       crypto,
       "getRandomValues",
       returnsNext([mockValues]),
@@ -766,17 +659,15 @@ Deno.test("createSecret", async (t) => {
 
     const secret = createSecret(3);
 
-    assertSpyCall(randomStub, 0, {
-      args: [new Uint8Array(3)],
-      returned: mockValues,
-    });
-    assertSpyCalls(randomStub, 1);
-    assertMatch(secret, /^[A-Za-z0-9_-]{3}$/);
+    assert.deepStrictEqual(randomStub.mock.calls[0].arguments, [new Uint8Array(3)]);
+    assert.strictEqual(randomStub.mock.calls[0].result, mockValues);
+    assert.strictEqual(randomStub.mock.callCount(), 1);
+    assert.match(secret, /^[A-Za-z0-9_-]{3}$/);
   });
 });
 
-Deno.test("signOAuthUser", async (t) => {
-  await t.step(" sign user data with provided values", async () => {
+test("signOAuthUser", async (t) => {
+  await t.test(" sign user data with provided values", async () => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const user: Omit<TelegramOAuthUser, "hash"> = {
       id: 123456789,
@@ -790,22 +681,22 @@ Deno.test("signOAuthUser", async (t) => {
     const signedData = await signOAuthUser(botToken, user);
 
     // Verify all original fields are preserved with correct types
-    assertEquals(signedData.id, 123456789);
-    assertEquals(signedData.first_name, "John");
-    assertEquals(signedData.last_name, "Doe");
-    assertEquals(signedData.username, "johndoe");
-    assertEquals(signedData.photo_url, "https://example.com/photo.jpg");
-    assertEquals(signedData.auth_date, 1234567890);
+    assert.deepStrictEqual(signedData.id, 123456789);
+    assert.deepStrictEqual(signedData.first_name, "John");
+    assert.deepStrictEqual(signedData.last_name, "Doe");
+    assert.deepStrictEqual(signedData.username, "johndoe");
+    assert.deepStrictEqual(signedData.photo_url, "https://example.com/photo.jpg");
+    assert.deepStrictEqual(signedData.auth_date, 1234567890);
 
     // Verify hash is present and valid (64 hex chars)
-    assertMatch(signedData.hash, /^[a-f0-9]{64}$/);
+    assert.match(signedData.hash, /^[a-f0-9]{64}$/);
 
     // Verify the data is valid
     const validator = tgtb(botToken).oauth;
     await validator.validate(signedData);
   });
 
-  await t.step("handle special characters in user data", async () => {
+  await t.test("handle special characters in user data", async () => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const user: Omit<TelegramOAuthUser, "hash"> = {
       id: 123456789,
@@ -819,16 +710,16 @@ Deno.test("signOAuthUser", async (t) => {
     const signedData = await signOAuthUser(botToken, user);
 
     // Verify special characters are preserved
-    assertEquals(signedData.first_name, "John & Jane");
-    assertEquals(signedData.last_name, "O'Doe=Smith");
-    assertEquals(signedData.username, "john.doe+test");
+    assert.deepStrictEqual(signedData.first_name, "John & Jane");
+    assert.deepStrictEqual(signedData.last_name, "O'Doe=Smith");
+    assert.deepStrictEqual(signedData.username, "john.doe+test");
 
     // Verify the data is valid
     const validator = tgtb(botToken).oauth;
     await validator.validate(signedData);
   });
 
-  await t.step("generate same hash for same input", async () => {
+  await t.test("generate same hash for same input", async () => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const user: Omit<TelegramOAuthUser, "hash"> = {
       id: 123456789,
@@ -842,14 +733,14 @@ Deno.test("signOAuthUser", async (t) => {
     const signedData1 = await signOAuthUser(botToken, user);
     const signedData2 = await signOAuthUser(botToken, user);
 
-    assertEquals(
+    assert.deepStrictEqual(
       signedData1.hash,
       signedData2.hash,
       "Same input  produce same hash",
     );
   });
 
-  await t.step(
+  await t.test(
     "generate different hash for different bot tokens",
     async () => {
       const user: Omit<TelegramOAuthUser, "hash"> = {
@@ -867,7 +758,7 @@ Deno.test("signOAuthUser", async (t) => {
       const signedData1 = await signOAuthUser(botToken1, user);
       const signedData2 = await signOAuthUser(botToken2, user);
 
-      assertNotEquals(
+      assert.notDeepStrictEqual(
         signedData1.hash,
         signedData2.hash,
         "Different tokens  produce different hashes",
@@ -875,7 +766,7 @@ Deno.test("signOAuthUser", async (t) => {
     },
   );
 
-  await t.step("handle null and undefined values", async () => {
+  await t.test("handle null and undefined values", async () => {
     const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
     const user = {
       id: 123456789,
@@ -889,8 +780,8 @@ Deno.test("signOAuthUser", async (t) => {
     const signedData = await signOAuthUser(botToken, user);
 
     // Verify null and undefined fields are omitted
-    assert(!("last_name" in signedData), "Undefined fields  be omitted");
-    assert(!("username" in signedData), "Undefined fields  be omitted");
+    assert.ok(!("last_name" in signedData), "Undefined fields  be omitted");
+    assert.ok(!("username" in signedData), "Undefined fields  be omitted");
 
     // Verify the data is valid
     const validator = tgtb(botToken).oauth;
@@ -898,36 +789,36 @@ Deno.test("signOAuthUser", async (t) => {
   });
 });
 
-Deno.test("randomOAuthUser", async (t) => {
-  await t.step(
+test("randomOAuthUser", async (t) => {
+  await t.test(
     "generate valid user data with stubbed values",
-    async () => {
+    async (t) => {
       const now = 1234567890;
       globalThis.Date.now = () => now * 1000;
 
-      using numberStub = stub(
-        faker.random,
-        "number",
+      const numberStub = t.mock.method(
+        faker.number,
+        "int",
         returnsNext([123456789]),
       );
-      using firstNameStub = stub(
-        faker.name,
+      const firstNameStub = t.mock.method(
+        faker.person,
         "firstName",
         returnsNext(["John"]),
       );
-      using lastNameStub = stub(
-        faker.name,
+      const lastNameStub = t.mock.method(
+        faker.person,
         "lastName",
         returnsNext(["Doe"]),
       );
-      using userNameStub = stub(
+      const userNameStub = t.mock.method(
         faker.internet,
-        "userName",
+        "username",
         returnsNext(["johndoe"]),
       );
-      using imageUrlStub = stub(
+      const imageUrlStub = t.mock.method(
         faker.image,
-        "imageUrl",
+        "url",
         returnsNext(["https://example.com/photo.jpg"]),
       );
 
@@ -935,37 +826,27 @@ Deno.test("randomOAuthUser", async (t) => {
       const user = await randomOAuthUser(botToken);
 
       // Verify all faker calls
-      assertSpyCall(numberStub, 0, {
-        args: [{ min: 10000000, max: 999999999 }],
-        returned: 123456789,
-      });
-      assertSpyCall(firstNameStub, 0, {
-        args: [],
-        returned: "John",
-      });
-      assertSpyCall(lastNameStub, 0, {
-        args: [],
-        returned: "Doe",
-      });
-      assertSpyCall(userNameStub, 0, {
-        args: [],
-        returned: "johndoe",
-      });
-      assertSpyCall(imageUrlStub, 0, {
-        args: [],
-        returned: "https://example.com/photo.jpg",
-      });
+      assert.deepStrictEqual(numberStub.mock.calls[0].arguments, [{ min: 10000000, max: 999999999 }]);
+      assert.strictEqual(numberStub.mock.calls[0].result, 123456789);
+      assert.deepStrictEqual(firstNameStub.mock.calls[0].arguments, []);
+      assert.strictEqual(firstNameStub.mock.calls[0].result, "John");
+      assert.deepStrictEqual(lastNameStub.mock.calls[0].arguments, []);
+      assert.strictEqual(lastNameStub.mock.calls[0].result, "Doe");
+      assert.deepStrictEqual(userNameStub.mock.calls[0].arguments, []);
+      assert.strictEqual(userNameStub.mock.calls[0].result, "johndoe");
+      assert.deepStrictEqual(imageUrlStub.mock.calls[0].arguments, []);
+      assert.strictEqual(imageUrlStub.mock.calls[0].result, "https://example.com/photo.jpg");
 
       // Verify generated user structure
-      assertEquals(user.id, 123456789);
-      assertEquals(user.first_name, "John");
-      assertEquals(user.last_name, "Doe");
-      assertEquals(user.username, "johndoe");
-      assertEquals(user.photo_url, "https://example.com/photo.jpg");
-      assertEquals(user.auth_date, 1234567890);
+      assert.deepStrictEqual(user.id, 123456789);
+      assert.deepStrictEqual(user.first_name, "John");
+      assert.deepStrictEqual(user.last_name, "Doe");
+      assert.deepStrictEqual(user.username, "johndoe");
+      assert.deepStrictEqual(user.photo_url, "https://example.com/photo.jpg");
+      assert.deepStrictEqual(user.auth_date, 1234567890);
 
       // Verify hash is present and valid
-      assertMatch(user.hash, /^[a-f0-9]{64}$/);
+      assert.match(user.hash, /^[a-f0-9]{64}$/);
 
       // Verify the data is valid
       const validator = tgtb(botToken).oauth;
@@ -973,35 +854,35 @@ Deno.test("randomOAuthUser", async (t) => {
     },
   );
 
-  await t.step("generate unique data each time", async () => {
+  await t.test("generate unique data each time", async (t) => {
     const now1 = 1234567890;
     const now2 = 1234567891;
     let currentTime = now1;
     globalThis.Date.now = () => currentTime * 1000;
 
-    using numberStub = stub(
-      faker.random,
-      "number",
+    const numberStub = t.mock.method(
+      faker.number,
+      "int",
       returnsNext([111111, 222222]),
     );
-    using firstNameStub = stub(
-      faker.name,
+    const firstNameStub = t.mock.method(
+      faker.person,
       "firstName",
       returnsNext(["Alice", "Bob"]),
     );
-    using lastNameStub = stub(
-      faker.name,
+    const lastNameStub = t.mock.method(
+      faker.person,
       "lastName",
       returnsNext(["Smith", "Jones"]),
     );
-    using userNameStub = stub(
+    const userNameStub = t.mock.method(
       faker.internet,
-      "userName",
+      "username",
       returnsNext(["alice", "bob"]),
     );
-    using imageUrlStub = stub(
+    const imageUrlStub = t.mock.method(
       faker.image,
-      "imageUrl",
+      "url",
       returnsNext([
         "https://example1.com/photo.jpg",
         "https://example2.com/photo.jpg",
@@ -1014,20 +895,20 @@ Deno.test("randomOAuthUser", async (t) => {
     currentTime = now2;
     const user2 = await randomOAuthUser(botToken);
 
-    assertNotEquals(user1.id, user2.id);
-    assertNotEquals(user1.first_name, user2.first_name);
-    assertNotEquals(user1.last_name, user2.last_name);
-    assertNotEquals(user1.username, user2.username);
-    assertNotEquals(user1.photo_url, user2.photo_url);
-    assertNotEquals(user1.auth_date, user2.auth_date);
-    assertNotEquals(user1.hash, user2.hash);
+    assert.notDeepStrictEqual(user1.id, user2.id);
+    assert.notDeepStrictEqual(user1.first_name, user2.first_name);
+    assert.notDeepStrictEqual(user1.last_name, user2.last_name);
+    assert.notDeepStrictEqual(user1.username, user2.username);
+    assert.notDeepStrictEqual(user1.photo_url, user2.photo_url);
+    assert.notDeepStrictEqual(user1.auth_date, user2.auth_date);
+    assert.notDeepStrictEqual(user1.hash, user2.hash);
 
     // Verify all stubs were called twice
-    assertSpyCalls(numberStub, 2);
-    assertSpyCalls(firstNameStub, 2);
-    assertSpyCalls(lastNameStub, 2);
-    assertSpyCalls(userNameStub, 2);
-    assertSpyCalls(imageUrlStub, 2);
+    assert.strictEqual(numberStub.mock.callCount(), 2);
+    assert.strictEqual(firstNameStub.mock.callCount(), 2);
+    assert.strictEqual(lastNameStub.mock.callCount(), 2);
+    assert.strictEqual(userNameStub.mock.callCount(), 2);
+    assert.strictEqual(imageUrlStub.mock.callCount(), 2);
 
     // Verify both users are valid
     const validator = tgtb(botToken).oauth;
@@ -1035,32 +916,13 @@ Deno.test("randomOAuthUser", async (t) => {
     await validator.validate(user2);
   });
 
-  await t.step("work without bot_token parameter", async () => {
-    using _numberStub = stub(
-      faker.random,
-      "number",
-      returnsNext([123456789, 123456789]),
-    );
-    using _arrayElementStub = stub(
-      faker.random,
-      "arrayElement",
-      returnsNext([...Array(35).fill("A"), "en"]),
-    );
-    using _firstNameStub = stub(
-      faker.name,
-      "firstName",
-      returnsNext(["John"]),
-    );
-    using _lastNameStub = stub(
-      faker.name,
-      "lastName",
-      returnsNext(["Doe"]),
-    );
-    using _userNameStub = stub(
-      faker.internet,
-      "userName",
-      returnsNext(["johndoe"]),
-    );
+  await t.test("work without bot_token parameter", async (t) => {
+    t.mock.method(faker.number, "int", returnsNext([123456789, 123456789]));
+    t.mock.method(faker.helpers, "arrayElement", returnsNext([...Array(35).fill("A")]));
+    t.mock.method(faker.person, "firstName", returnsNext(["John"]));
+    t.mock.method(faker.person, "lastName", returnsNext(["Doe"]));
+    t.mock.method(faker.internet, "username", returnsNext(["johndoe"]));
+    t.mock.method(faker.image, "url", returnsNext(["https://example.com/photo.jpg"]));
 
     const user = await randomOAuthUser();
     const expectedBotToken = "123456789:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
@@ -1069,42 +931,26 @@ Deno.test("randomOAuthUser", async (t) => {
     await validator.validate(user);
   });
 
-  await t.step(
+  await t.test(
     "handle special characters in generated data",
-    async () => {
-      using _numberStub = stub(
-        faker.random,
-        "number",
-        returnsNext([123456789]),
-      );
-      using _firstNameStub = stub(
-        faker.name,
-        "firstName",
-        returnsNext(["John & Jane"]),
-      );
-      using _lastNameStub = stub(
-        faker.name,
-        "lastName",
-        returnsNext(["O'Doe=Smith"]),
-      );
-      using _userNameStub = stub(
-        faker.internet,
-        "userName",
-        returnsNext(["john.doe+test"]),
-      );
-      using _imageUrlStub = stub(
+    async (t) => {
+      t.mock.method(faker.number, "int", returnsNext([123456789]));
+      t.mock.method(faker.person, "firstName", returnsNext(["John & Jane"]));
+      t.mock.method(faker.person, "lastName", returnsNext(["O'Doe=Smith"]));
+      t.mock.method(faker.internet, "username", returnsNext(["john.doe+test"]));
+      t.mock.method(
         faker.image,
-        "imageUrl",
+        "url",
         returnsNext(["https://example.com/photo+test.jpg"]),
       );
 
       const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
       const user = await randomOAuthUser(botToken);
 
-      assertEquals(user.first_name, "John & Jane");
-      assertEquals(user.last_name, "O'Doe=Smith");
-      assertEquals(user.username, "john.doe+test");
-      assertEquals(user.photo_url, "https://example.com/photo+test.jpg");
+      assert.deepStrictEqual(user.first_name, "John & Jane");
+      assert.deepStrictEqual(user.last_name, "O'Doe=Smith");
+      assert.deepStrictEqual(user.username, "john.doe+test");
+      assert.deepStrictEqual(user.photo_url, "https://example.com/photo+test.jpg");
 
       const validator = tgtb(botToken).oauth;
       await validator.validate(user);

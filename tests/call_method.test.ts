@@ -1,9 +1,8 @@
-// deno-lint-ignore-file require-await
-import { assertEquals, assertRejects } from "@std/assert";
-import { beforeEach, describe, it } from "@std/testing/bdd";
+import assert from "node:assert/strict";
+import { beforeEach, describe, it } from "node:test";
 
-import tgtb, { type Client } from "@izzqz/tgtb";
-import type { ApiError } from "@izzqz/tgtb/types";
+import tgtb, { type Client } from "../src/mod.ts";
+import type { ApiError } from "../src/types/telegram.ts";
 
 describe("api", () => {
   const BOT_TOKEN = "test_token";
@@ -12,7 +11,6 @@ describe("api", () => {
   let client: Client;
 
   beforeEach(() => {
-    // Reset mock for each test
     mockFetch = async (_input: string | URL | Request) => {
       return new Response(
         JSON.stringify({ ok: true, result: { test: "success" } }),
@@ -35,7 +33,7 @@ describe("api", () => {
     client = tgtb(BOT_TOKEN, { fetch_fn: mockFetch });
     await client.api.getMe();
 
-    assertEquals(
+    assert.deepStrictEqual(
       capturedUrl,
       `${DEFAULT_BASE_URL}${BOT_TOKEN}/getMe`,
     );
@@ -56,8 +54,8 @@ describe("api", () => {
     });
 
     const url = new URL(capturedUrl!);
-    assertEquals(url.searchParams.get("chat_id"), "123456");
-    assertEquals(url.searchParams.get("text"), "test message");
+    assert.deepStrictEqual(url.searchParams.get("chat_id"), "123456");
+    assert.deepStrictEqual(url.searchParams.get("text"), "test message");
   });
 
   it("handle object parameters correctly", async () => {
@@ -80,7 +78,7 @@ describe("api", () => {
     });
 
     const url = new URL(capturedUrl!);
-    assertEquals(
+    assert.deepStrictEqual(
       url.searchParams.get("reply_markup"),
       JSON.stringify(complexObject),
     );
@@ -101,7 +99,7 @@ describe("api", () => {
     });
     await client.api.getMe();
 
-    assertEquals(
+    assert.deepStrictEqual(
       capturedUrl,
       `${customBaseUrl}${BOT_TOKEN}/getMe`,
     );
@@ -132,7 +130,7 @@ describe("api", () => {
     client = tgtb(BOT_TOKEN, { fetch_fn: mockFetch });
     const response = await client.api.getMe();
 
-    assertEquals(response, expectedResponse);
+    assert.deepStrictEqual(response, expectedResponse);
   });
 
   it("handle API errors gracefully", async () => {
@@ -149,9 +147,9 @@ describe("api", () => {
     client = tgtb(BOT_TOKEN, { fetch_fn: mockFetch });
     const response = await client.api.getMe() as ApiError;
 
-    assertEquals(response.ok, false);
-    assertEquals(response.error_code, 404);
-    assertEquals(response.description, "Not Found");
+    assert.deepStrictEqual(response.ok, false);
+    assert.deepStrictEqual(response.error_code, 404);
+    assert.deepStrictEqual(response.description, "Not Found");
   });
 
   it("handle network errors", async () => {
@@ -161,12 +159,11 @@ describe("api", () => {
 
     client = tgtb(BOT_TOKEN, { fetch_fn: mockFetch });
 
-    await assertRejects(
+    await assert.rejects(
       async () => {
         await client.api.getMe();
       },
-      Error,
-      "Network error",
+      { message: "Network error" },
     );
   });
 
@@ -186,7 +183,7 @@ describe("api", () => {
     });
 
     const url = new URL(capturedUrl!);
-    assertEquals(url.searchParams.get("reply_to_message_id"), "undefined");
+    assert.deepStrictEqual(url.searchParams.get("reply_to_message_id"), "undefined");
   });
 
   it("work with no parameters", async () => {
@@ -201,7 +198,7 @@ describe("api", () => {
     await client.api.getMe();
 
     const url = new URL(capturedUrl!);
-    assertEquals(Array.from(url.searchParams.entries()).length, 0);
+    assert.deepStrictEqual(Array.from(url.searchParams.entries()).length, 0);
   });
 
   it("handle falsy parameter values", async () => {
@@ -220,7 +217,7 @@ describe("api", () => {
     });
 
     const url = new URL(capturedUrl!);
-    assertEquals(url.searchParams.get("disable_notification"), "false");
+    assert.deepStrictEqual(url.searchParams.get("disable_notification"), "false");
   });
 
   it("handle optional parameters", async () => {
@@ -241,9 +238,9 @@ describe("api", () => {
     });
 
     const url = new URL(capturedUrl!);
-    assertEquals(url.searchParams.get("disable_notification"), "false");
-    assertEquals(url.searchParams.get("protect_content"), "true");
-    assertEquals(url.searchParams.get("message_thread_id"), "789");
+    assert.deepStrictEqual(url.searchParams.get("disable_notification"), "false");
+    assert.deepStrictEqual(url.searchParams.get("protect_content"), "true");
+    assert.deepStrictEqual(url.searchParams.get("message_thread_id"), "789");
   });
 
   it("handle complex response types", async () => {
@@ -282,7 +279,7 @@ describe("api", () => {
       text: "Test message",
     });
 
-    assertEquals(response, complexResponse);
+    assert.deepStrictEqual(response, complexResponse);
   });
 
   it("use test mode URL when configured", async () => {
@@ -299,7 +296,7 @@ describe("api", () => {
     });
     await client.api.getMe();
 
-    assertEquals(
+    assert.deepStrictEqual(
       capturedUrl,
       `${DEFAULT_BASE_URL}${BOT_TOKEN}/test/getMe`,
     );
@@ -308,12 +305,12 @@ describe("api", () => {
   it("provide .url property on API methods", () => {
     const client = tgtb(BOT_TOKEN);
 
-    assertEquals(
+    assert.deepStrictEqual(
       client.api.getMe.url,
       `${DEFAULT_BASE_URL}${BOT_TOKEN}/getMe`,
     );
 
-    assertEquals(
+    assert.deepStrictEqual(
       client.api.sendMessage.url,
       `${DEFAULT_BASE_URL}${BOT_TOKEN}/sendMessage`,
     );
@@ -322,7 +319,7 @@ describe("api", () => {
   it("provide .url property with test mode", () => {
     const client = tgtb(BOT_TOKEN, { use_test_mode: true });
 
-    assertEquals(
+    assert.deepStrictEqual(
       client.api.getMe.url,
       `${DEFAULT_BASE_URL}${BOT_TOKEN}/test/getMe`,
     );
@@ -333,7 +330,7 @@ describe("api", () => {
 
     const client = tgtb(BOT_TOKEN, { base_url: customBaseUrl });
 
-    assertEquals(
+    assert.deepStrictEqual(
       client.api.getMe.url,
       `${customBaseUrl}${BOT_TOKEN}/getMe`,
     );

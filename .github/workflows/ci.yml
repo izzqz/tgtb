@@ -1,73 +1,21 @@
 name: CI
-
 on:
   push:
     branches: [main]
-    tags:
-      - "v*"
+    tags: ["v*"]
   pull_request:
     branches: [main]
 
 jobs:
-  lint:
+  qa:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Deno
-        uses: denoland/setup-deno@v1
-        with:
-          deno-version: v2.x
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy, rustfmt
-
-      - name: Install just
-        uses: taiki-e/install-action@v2
-        with:
-          tool: just
-
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.deno
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-lint-deps-${{ hashFiles('**/Cargo.lock', '**/deno.lock') }}
-          restore-keys: ${{ runner.os }}-lint-deps-
-
-      - name: Run linting
-        run: just prepare lint
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Deno
-        uses: denoland/setup-deno@v1
-        with:
-          deno-version: v2.x
-
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.deno
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-test-deps-${{ hashFiles('**/Cargo.lock', '**/deno.lock') }}
-          restore-keys: ${{ runner.os }}-test-deps-
-
-      - name: Install just
-        uses: taiki-e/install-action@v2
-        with:
-          tool: just
-
-      - name: Run tests
-        run: just prepare test
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with: { node-version: 'latest', cache: 'pnpm' }
+      - uses: extractions/setup-just@v3
+      - run: just prepare
+      - run: just lint
+      - run: just build
+      - run: just test

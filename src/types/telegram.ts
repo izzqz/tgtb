@@ -4,7 +4,7 @@
  * @module
  */
 
-export type * from "../../lib/grammy-types/mod.ts";
+export type * from "@grammyjs/types";
 
 /**
  * User from [Telegram Login Widget](https://core.telegram.org/widgets/login)

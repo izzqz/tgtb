@@ -18,7 +18,7 @@ release type='patch': prepare lint build
     set -euxo pipefail
     git diff-index --quiet HEAD -- || { echo "error: working tree is dirty"; exit 1; }
     cur_version=$(node -p "require('./package.json').version")
-    new_version=$(semver increment {{ type }} "$cur_version")
+    new_version=$(pnpm exec semver -i {{ type }} "$cur_version")
     node -e "const fs=require('fs'),p=JSON.parse(fs.readFileSync('package.json'));p.version='$new_version';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
     git add package.json
     git commit -m "v$new_version"

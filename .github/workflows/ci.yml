@@ -14,7 +14,8 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with: { node-version: 'latest', cache: 'pnpm' }
-      - run: pnpm install
-      - run: pnpm lint
-      - run: pnpm build
-      - run: pnpm test
+      - uses: extractions/setup-just@v3
+      - run: just prepare
+      - run: just lint
+      - run: just build
+      - run: just test

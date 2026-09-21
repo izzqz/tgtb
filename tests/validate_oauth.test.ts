@@ -264,4 +264,38 @@ test("validate_oauth", async (t) => {
       assert.deepStrictEqual(await client.oauth.isValid(user), false);
     });
   });
+
+  await t.test("validate minimal valid OAuth user", async () => {
+    const fixedNow = 1707000000000;
+    const auth_date = Math.floor(fixedNow / 1000);
+    const user = await signOAuthUser(BOT_TOKEN, {
+      id: 123456789,
+      first_name: "Test",
+      auth_date,
+    });
+
+    assert.ok(!("last_name" in user));
+    assert.ok(!("username" in user));
+    assert.ok(!("photo_url" in user));
+
+    await client.oauth.validate(user);
+    assert.deepStrictEqual(await client.oauth.isValid(user), true);
+  });
+
+  await t.test("validate user with non-alphabetical key order", async () => {
+    const fixedNow = 1707000000000;
+    const auth_date = Math.floor(fixedNow / 1000);
+
+    const user1 = await signOAuthUser(BOT_TOKEN, {
+      username: "testuser",
+      photo_url: "https://example.com/photo.jpg",
+      last_name: "Doe",
+      id: 123456789,
+      first_name: "John",
+      auth_date,
+    });
+
+    await client.oauth.validate(user1);
+    assert.deepStrictEqual(await client.oauth.isValid(user1), true);
+  });
 });

@@ -51,7 +51,11 @@ export function buildCallMethod(
     for (const key in params) {
       const value = (params as Record<string, unknown>)[key];
 
-      if (typeof value === "object" && value !== null) {
+      if (value === null || value === undefined) {
+        continue;
+      }
+
+      if (typeof value === "object") {
         url.searchParams.set(key, JSON.stringify(value));
       } else {
         url.searchParams.set(key, String(value));

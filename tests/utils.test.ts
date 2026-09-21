@@ -598,6 +598,26 @@ test("signInitData", async (t) => {
       );
     },
   );
+
+  await t.test("handle empty user object", async () => {
+    const botToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";
+    const params = {
+      user: {},
+      query_id: "AAFABC123XYZ",
+      auth_date: 1234567890,
+    };
+
+    const initData = await signInitData(botToken, params);
+
+    // Verify the data is valid even with empty user
+    const validator = tgtb(botToken).init_data;
+    await validator.validate(initData);
+
+    // Verify user is preserved as empty object
+    const urlParams = new URLSearchParams(initData);
+    const user = JSON.parse(urlParams.get("user")!);
+    assert.deepStrictEqual(user, {});
+  });
 });
 
 test("createSecret", async (t) => {
@@ -625,6 +645,12 @@ test("createSecret", async (t) => {
         `Secret length  match specified length (got ${secret.length}, expected ${length})`,
       );
     }
+  });
+
+  await t.test("generate zero-length secret", () => {
+    const secret = createSecret(0);
+    assert.deepStrictEqual(secret, "");
+    assert.deepStrictEqual(secret.length, 0);
   });
 
   await t.test("generate unique secrets", () => {

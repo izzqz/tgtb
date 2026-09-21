@@ -36,7 +36,7 @@ export const importHMAC = async (
     "raw",
     buffer,
     { name: "HMAC", hash: "SHA-256" },
-    true,
+    false,
     ["sign"],
   );
 
@@ -58,8 +58,8 @@ export const createDataCheckString = (
 ): string => {
   return [...entries]
     .filter(([key]) => key !== "hash")
+    .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, value]) => `${key}=${value}`)
-    .sort()
     .join("\n");
 };
 

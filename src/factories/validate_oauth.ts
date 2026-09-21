@@ -1,7 +1,7 @@
 // import { create_oauth_validator } from "../../lib/tg_validator.ts";
 import type { TgtbConfig } from "../types/interface.ts";
 import type { TelegramOAuthUser } from "../types/telegram.ts";
-import { createDataCheckString, encode, importHMAC } from "../utils/crypto.ts";
+import { createDataCheckString, encode, importHMAC, signHMAC } from "../utils/crypto.ts";
 
 function createOauthValidator(
   bot_token: string,
@@ -28,8 +28,7 @@ function createOauthValidator(
 
     const { data_check_string, hash, auth_date } = prepareData(oauth_user);
 
-    const computed_hash = await crypto.subtle.sign(
-      "HMAC",
+    const computed_hash = await signHMAC(
       await secret_key,
       encode(data_check_string),
     )

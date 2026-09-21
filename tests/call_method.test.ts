@@ -183,7 +183,47 @@ describe("api", () => {
     });
 
     const url = new URL(capturedUrl!);
-    assert.deepStrictEqual(url.searchParams.get("reply_to_message_id"), "undefined");
+    assert.deepStrictEqual(url.searchParams.has("reply_to_message_id"), false);
+  });
+
+  it("handle null parameter values", async () => {
+    let capturedUrl: string | undefined;
+
+    mockFetch = async (input: string | URL | Request) => {
+      capturedUrl = input.toString();
+      return new Response(JSON.stringify({ ok: true, result: {} }));
+    };
+
+    client = tgtb(BOT_TOKEN, { fetch_fn: mockFetch });
+    await client.api.sendMessage({
+      chat_id: 123456,
+      text: "test message",
+      reply_to_message_id: null,
+    });
+
+    const url = new URL(capturedUrl!);
+    assert.deepStrictEqual(url.searchParams.has("reply_to_message_id"), false);
+  });
+
+  it("handle falsy parameter values correctly", async () => {
+    let capturedUrl: string | undefined;
+
+    mockFetch = async (input: string | URL | Request) => {
+      capturedUrl = input.toString();
+      return new Response(JSON.stringify({ ok: true, result: {} }));
+    };
+
+    client = tgtb(BOT_TOKEN, { fetch_fn: mockFetch });
+    await client.api.sendMessage({
+      chat_id: 0,
+      text: "",
+      disable_notification: false,
+    });
+
+    const url = new URL(capturedUrl!);
+    assert.deepStrictEqual(url.searchParams.get("chat_id"), "0");
+    assert.deepStrictEqual(url.searchParams.get("text"), "");
+    assert.deepStrictEqual(url.searchParams.get("disable_notification"), "false");
   });
 
   it("work with no parameters", async () => {
@@ -333,6 +373,37 @@ describe("api", () => {
     assert.deepStrictEqual(
       client.api.getMe.url,
       `${customBaseUrl}${BOT_TOKEN}/getMe`,
+    );
+  });
+
+  it("handle non-JSON response body", async () => {
+    mockFetch = async () => {
+      return new Response("<html>Server Error</html>", { status: 500 });
+    };
+
+    client = tgtb(BOT_TOKEN, { fetch_fn: mockFetch });
+
+    await assert.rejects(
+      async () => {
+        await client.api.getMe();
+      },
+    );
+  });
+
+  it("call nonexistent method", async () => {
+    let capturedUrl: string | undefined;
+
+    mockFetch = async (input: string | URL | Request) => {
+      capturedUrl = input.toString();
+      return new Response(JSON.stringify({ ok: true, result: {} }));
+    };
+
+    client = tgtb(BOT_TOKEN, { fetch_fn: mockFetch });
+    await client.api.nonexistentMethod();
+
+    assert.deepStrictEqual(
+      capturedUrl,
+      `${DEFAULT_BASE_URL}${BOT_TOKEN}/nonexistentMethod`,
     );
   });
 });

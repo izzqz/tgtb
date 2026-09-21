@@ -12,7 +12,10 @@ test("validate_webapp", async (t) => {
   await t.test("validate random init data", async () => {
     const initData = await randomInitData(BOT_TOKEN);
 
-    assert.deepStrictEqual(await client.init_data.validate(initData), undefined);
+    assert.deepStrictEqual(
+      await client.init_data.validate(initData),
+      undefined,
+    );
     assert.deepStrictEqual(await client.init_data.isValid(initData), true);
   });
 
@@ -29,6 +32,14 @@ test("validate_webapp", async (t) => {
     await assert.rejects(
       () => client.init_data.validate(""),
       { message: "init_data is nullish" },
+    );
+  });
+
+  await t.test("reject init data with only hash field", async () => {
+    const initData = `hash=${"0".repeat(64)}`;
+
+    await assert.rejects(
+      () => client.init_data.validate(initData),
     );
   });
 
@@ -101,7 +112,10 @@ test("validate_webapp", async (t) => {
       auth_date,
     });
 
-    assert.deepStrictEqual(await client.init_data.validate(initData), undefined);
+    assert.deepStrictEqual(
+      await client.init_data.validate(initData),
+      undefined,
+    );
   });
 
   await t.test("validate structured data with valid hash", async () => {
@@ -118,7 +132,10 @@ test("validate_webapp", async (t) => {
       auth_date,
     });
 
-    assert.deepStrictEqual(await client.init_data.validate(initData), undefined);
+    assert.deepStrictEqual(
+      await client.init_data.validate(initData),
+      undefined,
+    );
   });
 
   await t.test("reject hash as first parameter", async () => {
@@ -157,7 +174,10 @@ test("validate_webapp", async (t) => {
       query_id: "test123",
       auth_date,
     });
-    assert.deepStrictEqual(await client.init_data.validate(validData), undefined);
+    assert.deepStrictEqual(
+      await client.init_data.validate(validData),
+      undefined,
+    );
   });
 
   await t.test("handle encoded special characters", async () => {
@@ -190,6 +210,46 @@ test("validate_webapp", async (t) => {
     await assert.rejects(
       () => client.init_data.validate(initData),
     );
+  });
+
+  await t.test("reject init data with newline in value", async () => {
+    const initData = `query_id=test&user=a%0Ab&hash=${"0".repeat(64)}`;
+
+    await assert.rejects(
+      () => client.init_data.validate(initData),
+    );
+  });
+
+  await t.test("validate without auth_date with expiration set", async () => {
+    const initData = await signInitData(BOT_TOKEN, {
+      user: { id: 123456789, first_name: "Test" },
+      query_id: "test123",
+      auth_date: Math.floor(Date.now() / 1000),
+    });
+
+    const params = new URLSearchParams(initData);
+    params.delete("auth_date");
+    const hash = params.get("hash")!;
+    params.delete("hash");
+
+    const noAuthDate = params.toString() + "&hash=" + hash;
+
+    await assert.rejects(
+      () => client.init_data.validate(noAuthDate),
+    );
+  });
+
+  await t.test("consistent hash with same signer keys", async () => {
+    const auth_date = Math.floor(Date.now() / 1000);
+    const user = { id: 123456789, first_name: "Test" };
+
+    const initData = await signInitData(BOT_TOKEN, {
+      user,
+      query_id: "test123",
+      auth_date,
+    });
+
+    await client.init_data.validate(initData);
   });
 
   await t.test("expiration tests", async (t) => {
@@ -270,6 +330,32 @@ test("validate_webapp", async (t) => {
 
       t.mock.timers.tick(365 * 24 * 60 * 60 * 1000);
       assert.deepStrictEqual(await client.init_data.isValid(initData), true);
+    });
+
+    await t.test("expire exactly at expiration boundary", async () => {
+      const startTime = Math.floor(Date.now() / 1000);
+      const initData = await signInitData(BOT_TOKEN, {
+        user,
+        query_id: "test123",
+        auth_date: startTime,
+      });
+
+      const client = tgtb(BOT_TOKEN, { hash_expiration: 60 });
+
+      // Should be valid initially
+      assert.deepStrictEqual(await client.init_data.isValid(initData), true);
+
+      // 59 seconds later, still valid
+      t.mock.timers.tick(59 * 1000);
+      assert.deepStrictEqual(await client.init_data.isValid(initData), true);
+
+      // At exactly 60 seconds, should expire (>= boundary)
+      t.mock.timers.tick(1000);
+      assert.deepStrictEqual(await client.init_data.isValid(initData), false);
+      await assert.rejects(
+        () => client.init_data.validate(initData),
+        { message: "hash expired" },
+      );
     });
   });
 });

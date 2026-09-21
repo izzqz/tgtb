@@ -1,3 +1,0 @@
-[submodule "lib/grammy-types"]
-	path = lib/grammy-types
-	url = https://github.com/grammyjs/types.git

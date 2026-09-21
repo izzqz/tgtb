@@ -12,8 +12,8 @@ importers:
         specifier: ^10.6.0
         version: 10.6.0
       '@grammyjs/types':
-        specifier: ^3.28.0
-        version: 3.28.0
+        specifier: ^5.0.0
+        version: 5.0.0
     devDependencies:
       tsx:
         specifier: ^4.23.15
@@ -184,8 +184,8 @@ packages:
     resolution: {integrity: sha512-3RQHgEtvL1Frl/d1cSreo7qhJ3Gk1OdNUai/CtZ8G+wYeRQnJih3s9xJ9/kgYekPQRdwgh0HXRPqMlzWGwivIQ==}
     engines: {node: ^20.19.0 || ^22.13.0 || ^23.5.0 || >=24.0.0, npm: '>=10'}
 
-  '@grammyjs/types@3.28.0':
-    resolution: {integrity: sha512-4JvXCdxRZHCje0M4gHzLwtB4bLno3WD28xd8CNfk4POWIu73BFnSvGeW6OQ5gPem4eYTEwkD9yDaXssixl6tMQ==}
+  '@grammyjs/types@5.0.0':
+    resolution: {integrity: sha512-iq1Qrq1iPKkB8yAa0qSuIURMZOCuqTY5pWy5gHpCeL1oQ+GPadGhw/cDTVE8waJwuCzacUzuIjRv1sESvk7u7A==}
 
   esbuild@0.28.2:
     resolution: {integrity: sha512-HKVLS8dvII+xoKW9kmqxbRKrnWEXfJJr/FZhhJmiqIB0e053QNYFqOBouTMO/k5sID4MvCiUCvv8b9M4h32wIA==}
@@ -289,7 +289,7 @@ snapshots:
 
   '@faker-js/faker@10.6.0': {}
 
-  '@grammyjs/types@3.28.0': {}
+  '@grammyjs/types@5.0.0': {}
 
   esbuild@0.28.2:
     optionalDependencies:

@@ -3,5 +3,5 @@
  * @module
  */
 
-export * from "./test-utils.ts";
+export * from "./testing.ts";
 export * from "./crypto.ts";

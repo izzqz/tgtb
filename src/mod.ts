@@ -43,6 +43,7 @@ export const DEFAULT_CONFIG: Required<TgtbConfig> = Object.freeze({
   base_url: "https://api.telegram.org/bot",
   use_test_mode: false,
   hash_expiration: null,
+  ed25519_public_key: null,
 });
 
 /**

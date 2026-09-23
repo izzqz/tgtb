@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import tgtb from "../src/mod.ts";
-import { randomOAuthUser, signOAuthUser } from "../src/utils/test-utils.ts";
+import { randomOAuthUser, signOAuthUser } from "../src/utils/testing.ts";
 import type { TelegramOAuthUser } from "../src/types/telegram.ts";
 
 const BOT_TOKEN = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11";

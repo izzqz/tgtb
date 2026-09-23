@@ -172,4 +172,11 @@ export interface TgtbConfig {
    * @default null (disabled)
    */
   hash_expiration?: number | null;
+  /**
+   * Ed25519 public key, as 32 bytes hex, used to validate third-party signed init data
+   * If null or undefined, signature validation is disabled
+   * @see [TELEGRAM_ED25519_PUBLIC_KEY](https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app)
+   * @default null (disabled)
+   */
+  ed25519_public_key?: string | null;
 }

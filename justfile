@@ -5,12 +5,19 @@ prepare:
     pnpm install
 
 test:
-    node --test
+    node --test 'tests/**/*.test.ts'
+
+coverage:
+    node --test --experimental-test-coverage \
+        --test-coverage-include='src/**' \
+        --test-coverage-exclude='dist/**' \
+        'tests/**/*.test.ts'
 
 lint:
     pnpm exec tsc --noEmit
 
 build:
+    rm -rf dist
     pnpm exec tsc
 
 release type='patch': prepare lint build

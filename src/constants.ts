@@ -24,3 +24,15 @@ export const WEB_APP_UINT8: Uint8Array<ArrayBuffer> = new Uint8Array([
   116,
   97,
 ]);
+
+/**
+ * Telegram Ed25519 public key
+ */
+export const TELEGRAM_ED25519_PUBLIC_KEY =
+  "e7bf03a2fa4602af4580703d88dda5bb59f32ed8b02a56c187fe7d34caed242d";
+
+/**
+ * Telegram test Ed25519 public key
+ */
+export const TELEGRAM_TEST_ED25519_PUBLIC_KEY =
+  "40055058a4ee38156a06562e52eece92a771bcd8346a8c4615cb7376eddf72ec";

@@ -24,12 +24,35 @@
  * botToken: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
  * ```
  *
+ * Functions of this module require `@faker-js/faker` to be installed, it is an
+ * optional dependency. Every other part of the library works without it.
+ *
  * @module
  */
 
-import { faker } from "@faker-js/faker";
+import type { Faker } from "@faker-js/faker";
 import { TOKEN_CHARS } from "../constants.ts";
 import type { TelegramOAuthUser } from "../types/telegram.ts";
+import {
+  compareCodes,
+  createDataCheckString,
+  encode,
+  importHMAC,
+  signHMAC,
+  toBase64,
+  toHex,
+} from "./crypto.ts";
+
+const faker_module = await import("@faker-js/faker").catch(() => null);
+
+const faker: Faker = faker_module?.faker ??
+  new Proxy({} as Faker, {
+    get() {
+      throw new Error(
+        "@faker-js/faker is required by tgtb test utilities, install it with `npm i -D @faker-js/faker`",
+      );
+    },
+  });
 /**
  * Generates a random bot token
  *
@@ -116,38 +139,22 @@ export function randomBotUsername(): string {
 }
 
 /**
- * HMAC SHA-256 hash function
- *
- * @private
- * @param key - The key to use for the hash.
- * @param data - The data to hash.
- * @returns The hash of the data.
+ * Ed25519 key pair
  */
-async function hmacSha256(
-  key: BufferSource,
-  data: BufferSource,
-): Promise<ArrayBuffer> {
-  const cryptoKey = await crypto.subtle.importKey(
-    "raw",
-    key,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
+export async function generateEd25519KeyPair(): Promise<{
+  public_key: string;
+  private_key: CryptoKey;
+}> {
+  const keyPair = await crypto.subtle.generateKey(
+    { name: "Ed25519" },
+    true,
+    ["sign", "verify"],
   );
-  return await crypto.subtle.sign("HMAC", cryptoKey, data);
-}
 
-/**
- * Converts an ArrayBuffer to a hex string
- *
- * @private
- * @param buffer - The ArrayBuffer to convert.
- * @returns The hex string.
- */
-function buf2hex(buffer: ArrayBuffer): string {
-  return Array.from(new Uint8Array(buffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  return {
+    public_key: toHex(await crypto.subtle.exportKey("raw", keyPair.publicKey)),
+    private_key: keyPair.privateKey,
+  };
 }
 
 /**
@@ -177,6 +184,7 @@ function buf2hex(buffer: ArrayBuffer): string {
  *
  * @param bot_token - The bot token to use for the signature
  * @param params - The parameters to sign
+ * @param options - signature key
  * @returns The signed init data
  */
 export async function signInitData(
@@ -186,6 +194,7 @@ export async function signInitData(
     query_id: string;
     auth_date: number;
   },
+  { signature_key }: { signature_key?: CryptoKey } = {},
 ): Promise<string> {
   type Entry = [string, string];
   const entries: Entry[] = [
@@ -194,33 +203,36 @@ export async function signInitData(
     ["user", typeof user === "string" ? user : JSON.stringify(user)],
   ];
 
-  const sortedEntries = entries.sort(([a], [b]) => a.localeCompare(b));
+  if (signature_key) {
+    const signature = await crypto.subtle.sign(
+      { name: "Ed25519" },
+      signature_key,
+      encode(
+        `${bot_token.split(":")[0]}:WebAppData\n` +
+          createDataCheckString(entries, ["hash", "signature"]),
+      ),
+    );
 
-  const { params, dataCheckString } = sortedEntries.reduce<{
-    dataCheckString: string;
-    params: string;
-  }>(
-    (acc, [key, value], index) => ({
-      dataCheckString: acc.dataCheckString + (index ? "\n" : "") +
-        `${key}=${value}`,
-      params: acc.params + (index ? "&" : "") +
-        `${key}=${encodeURIComponent(value)}`,
-    }),
-    { dataCheckString: "", params: "" },
+    entries.push(["signature", toBase64(signature)]);
+  }
+
+  const sortedEntries = entries.sort(([a], [b]) => compareCodes(a, b));
+
+  const secretKey = await signHMAC(
+    await importHMAC(encode("WebAppData")),
+    encode(bot_token),
   );
 
-  const encoder = new TextEncoder();
-  const secretKey = await hmacSha256(
-    encoder.encode("WebAppData"),
-    encoder.encode(bot_token),
+  const hash = await signHMAC(
+    await importHMAC(await secretKey),
+    encode(createDataCheckString(sortedEntries)),
   );
 
-  const signature = await hmacSha256(
-    secretKey,
-    encoder.encode(dataCheckString),
-  );
+  const params = sortedEntries
+    .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+    .join("&");
 
-  return `${params}&hash=${buf2hex(signature)}`;
+  return `${params}&hash=${toHex(hash)}`;
 }
 
 /**
@@ -241,9 +253,11 @@ export async function signInitData(
  * tgtb(bot_token).init_data.validate(initData); // true
  * ```
  * @param bot_token - The bot token to use for signing
+ * @param options - signature key
  */
 export async function randomInitData(
   bot_token: string = randomBotToken(),
+  { signature_key }: { signature_key?: CryptoKey } = {},
 ): Promise<string> {
   const queryId = `AAF${faker.string.alphanumeric(20)}`;
   const user = {
@@ -256,11 +270,15 @@ export async function randomInitData(
   };
   const authDate = Math.floor(Date.now() / 1000);
 
-  return await signInitData(bot_token, {
-    user,
-    query_id: queryId,
-    auth_date: authDate,
-  });
+  return await signInitData(
+    bot_token,
+    {
+      user,
+      query_id: queryId,
+      auth_date: authDate,
+    },
+    { signature_key },
+  );
 }
 
 /**
@@ -296,7 +314,7 @@ export async function signOAuthUser(
     .filter(([key, value]) => value != null && key !== "hash")
     .map(([key, value]) => [key, String(value)]);
 
-  const sortedEntries = entries.sort(([a], [b]) => a.localeCompare(b));
+  const sortedEntries = entries.sort(([a], [b]) => compareCodes(a, b));
 
   const dataCheckString = sortedEntries
     .map(([key, value]) => `${key}=${value}`)
@@ -335,7 +353,7 @@ export async function signOAuthUser(
 
   return {
     ...Object.fromEntries(processedEntries),
-    hash: buf2hex(signature),
+    hash: toHex(signature),
   };
 }
 

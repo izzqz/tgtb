@@ -8,13 +8,13 @@ importers:
 
   .:
     dependencies:
-      '@faker-js/faker':
-        specifier: ^10.6.0
-        version: 10.6.0
       '@grammyjs/types':
         specifier: ^5.0.0
         version: 5.0.0
     devDependencies:
+      '@faker-js/faker':
+        specifier: ^10.6.0
+        version: 10.6.0
       tsx:
         specifier: ^4.23.15
         version: 4.23.15

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { beforeEach, describe, it } from "node:test";
+import { beforeEach, describe, it, mock } from "node:test";
 
 import tgtb, { type Client } from "../src/mod.ts";
 import type { ApiError } from "../src/types/telegram.ts";
@@ -405,5 +405,160 @@ describe("api", () => {
       capturedUrl,
       `${DEFAULT_BASE_URL}${BOT_TOKEN}/nonexistentMethod`,
     );
+  });
+});
+
+describe("api rate limiting", () => {
+  const BOT_TOKEN = "test_token";
+
+  // await the in-flight fetch chain so the retry timer gets scheduled
+  const flush = () => new Promise((resolve) => setImmediate(resolve));
+
+  it("retry a 429 response and return the next result", async () => {
+    mock.timers.enable({ apis: ["setTimeout"], now: 0 });
+    try {
+      let calls = 0;
+      const fetchFn = async () => {
+        calls += 1;
+        if (calls === 1) {
+          return new Response(
+            JSON.stringify({
+              ok: false,
+              error_code: 429,
+              description: "Too Many Requests: retry after 2",
+              parameters: { retry_after: 2 },
+            }),
+          );
+        }
+        return new Response(JSON.stringify({ ok: true, result: {} }));
+      };
+
+      const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn });
+      const response = client.api.getMe();
+      await flush();
+      mock.timers.tick(2000);
+
+      assert.deepStrictEqual(await response, { ok: true, result: {} });
+      assert.equal(calls, 2);
+    } finally {
+      mock.timers.reset();
+    }
+  });
+
+  it("parse retry_after from the description when parameters are missing", async () => {
+    mock.timers.enable({ apis: ["setTimeout"], now: 0 });
+    try {
+      let calls = 0;
+      const fetchFn = async () => {
+        calls += 1;
+        if (calls === 1) {
+          return new Response(
+            JSON.stringify({
+              ok: false,
+              error_code: 429,
+              description: "Too Many Requests: retry after 1",
+            }),
+          );
+        }
+        return new Response(JSON.stringify({ ok: true, result: {} }));
+      };
+
+      const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn });
+      const response = client.api.getMe();
+      await flush();
+      mock.timers.tick(1000);
+
+      assert.deepStrictEqual(await response, { ok: true, result: {} });
+      assert.equal(calls, 2);
+    } finally {
+      mock.timers.reset();
+    }
+  });
+
+  it("return the 429 response after exhausting max_retries", async () => {
+    mock.timers.enable({ apis: ["setTimeout"], now: 0 });
+    try {
+      let calls = 0;
+      const error = {
+        ok: false,
+        error_code: 429,
+        description: "Too Many Requests: retry after 1",
+        parameters: { retry_after: 1 },
+      };
+      const fetchFn = async () => {
+        calls += 1;
+        return new Response(JSON.stringify(error));
+      };
+
+      const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn, max_retries: 2 });
+      const response = client.api.getMe();
+      await flush();
+      mock.timers.tick(1000);
+      await flush();
+      mock.timers.tick(1000);
+
+      assert.deepStrictEqual(await response, error);
+      assert.equal(calls, 3);
+    } finally {
+      mock.timers.reset();
+    }
+  });
+
+  it("not retry when max_retries is 0", async () => {
+    let calls = 0;
+    const error = {
+      ok: false,
+      error_code: 429,
+      description: "Too Many Requests: retry after 1",
+      parameters: { retry_after: 1 },
+    };
+    const fetchFn = async () => {
+      calls += 1;
+      return new Response(JSON.stringify(error));
+    };
+
+    const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn, max_retries: 0 });
+
+    assert.deepStrictEqual(await client.api.getMe(), error);
+    assert.equal(calls, 1);
+  });
+
+  it("not retry non-429 errors", async () => {
+    let calls = 0;
+    const error = { ok: false, error_code: 404, description: "Not Found" };
+    const fetchFn = async () => {
+      calls += 1;
+      return new Response(JSON.stringify(error));
+    };
+
+    const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn });
+
+    assert.deepStrictEqual(await client.api.getMe(), error);
+    assert.equal(calls, 1);
+  });
+
+  it("not retry a 429 without a positive retry_after", async () => {
+    const errors = [
+      { ok: false as const, error_code: 429, description: "Too Many Requests" },
+      {
+        ok: false as const,
+        error_code: 429,
+        description: "Too Many Requests: retry after 0",
+        parameters: { retry_after: 0 },
+      },
+    ];
+
+    for (const error of errors) {
+      let calls = 0;
+      const fetchFn = async () => {
+        calls += 1;
+        return new Response(JSON.stringify(error));
+      };
+
+      const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn });
+
+      assert.deepStrictEqual(await client.api.getMe(), error);
+      assert.equal(calls, 1);
+    }
   });
 });

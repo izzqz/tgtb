@@ -179,4 +179,11 @@ export interface TgtbConfig {
    * @default null (disabled)
    */
   ed25519_public_key?: string | null;
+  /**
+   * Number of times to retry a request when Telegram returns a 429 error,
+   * waiting `retry_after` seconds between attempts
+   * If 0, retrying is disabled
+   * @default 3
+   */
+  max_retries?: number;
 }

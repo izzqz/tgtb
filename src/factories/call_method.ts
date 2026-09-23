@@ -40,7 +40,7 @@ export function buildCallMethod(
   bot_token: string,
   config: TgtbConfig,
 ) {
-  const { fetch_fn } = config as Required<TgtbConfig>;
+  const { fetch_fn, max_retries } = config as Required<TgtbConfig>;
   return async <M extends BotMethodKeys<F>, F = unknown>(
     method: M,
     params?: Opts<F>[M],
@@ -62,12 +62,26 @@ export function buildCallMethod(
       }
     }
 
-    const response = await fetch_fn(url.toString());
-    const result = await response.json() as ApiResponse<
-      ReturnType<ApiMethods<F>[M]>
-    >;
+    for (let attempt = 0; ; attempt++) {
+      const response = await fetch_fn(url.toString());
+      const result = await response.json() as ApiResponse<
+        ReturnType<ApiMethods<F>[M]>
+      >;
 
-    return result;
+      if (result.ok || result.error_code !== 429 || attempt >= max_retries) {
+        return result;
+      }
+
+      // retry_after is usually in parameters, but may only be in the description
+      const retry_after = result.parameters?.retry_after ??
+        Number(/retry after (\d+)/i.exec(result.description)?.[1] ?? 0);
+
+      if (retry_after <= 0) {
+        return result;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, retry_after * 1000));
+    }
   };
 }
 

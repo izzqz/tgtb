@@ -40,10 +40,13 @@ describe("api", () => {
   });
 
   it("handle primitive parameters correctly", async () => {
-    let capturedUrl: string | undefined;
+    let capturedInit: RequestInit | undefined;
 
-    mockFetch = async (input: string | URL | Request) => {
-      capturedUrl = input.toString();
+    mockFetch = async (
+      _input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      capturedInit = init;
       return new Response(JSON.stringify({ ok: true, result: {} }));
     };
 
@@ -53,20 +56,29 @@ describe("api", () => {
       text: "test message",
     });
 
-    const url = new URL(capturedUrl!);
-    assert.deepStrictEqual(url.searchParams.get("chat_id"), "123456");
-    assert.deepStrictEqual(url.searchParams.get("text"), "test message");
+    assert.deepStrictEqual(capturedInit?.method, "POST");
+    assert.deepStrictEqual(
+      (capturedInit?.headers as Record<string, string>)["Content-Type"],
+      "application/json",
+    );
+    assert.deepStrictEqual(JSON.parse(capturedInit?.body as string), {
+      chat_id: 123456,
+      text: "test message",
+    });
   });
 
   it("handle object parameters correctly", async () => {
-    let capturedUrl: string | undefined;
+    let capturedInit: RequestInit | undefined;
     const complexObject = {
       keyboard: [[{ text: "Button 1" }, { text: "Button 2" }]],
       resize_keyboard: true,
     };
 
-    mockFetch = async (input: string | URL | Request) => {
-      capturedUrl = input.toString();
+    mockFetch = async (
+      _input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      capturedInit = init;
       return new Response(JSON.stringify({ ok: true, result: {} }));
     };
 
@@ -77,11 +89,11 @@ describe("api", () => {
       reply_markup: complexObject,
     });
 
-    const url = new URL(capturedUrl!);
-    assert.deepStrictEqual(
-      url.searchParams.get("reply_markup"),
-      JSON.stringify(complexObject),
-    );
+    assert.deepStrictEqual(JSON.parse(capturedInit?.body as string), {
+      chat_id: 123456,
+      text: "test message",
+      reply_markup: complexObject,
+    });
   });
 
   it("use custom base URL when provided", async () => {
@@ -168,10 +180,13 @@ describe("api", () => {
   });
 
   it("handle undefined parameter values", async () => {
-    let capturedUrl: string | undefined;
+    let capturedInit: RequestInit | undefined;
 
-    mockFetch = async (input: string | URL | Request) => {
-      capturedUrl = input.toString();
+    mockFetch = async (
+      _input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      capturedInit = init;
       return new Response(JSON.stringify({ ok: true, result: {} }));
     };
 
@@ -182,15 +197,18 @@ describe("api", () => {
       reply_to_message_id: undefined,
     });
 
-    const url = new URL(capturedUrl!);
-    assert.deepStrictEqual(url.searchParams.has("reply_to_message_id"), false);
+    const body = JSON.parse(capturedInit?.body as string);
+    assert.deepStrictEqual(Object.hasOwn(body, "reply_to_message_id"), false);
   });
 
   it("handle null parameter values", async () => {
-    let capturedUrl: string | undefined;
+    let capturedInit: RequestInit | undefined;
 
-    mockFetch = async (input: string | URL | Request) => {
-      capturedUrl = input.toString();
+    mockFetch = async (
+      _input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      capturedInit = init;
       return new Response(JSON.stringify({ ok: true, result: {} }));
     };
 
@@ -201,15 +219,18 @@ describe("api", () => {
       reply_to_message_id: null,
     });
 
-    const url = new URL(capturedUrl!);
-    assert.deepStrictEqual(url.searchParams.has("reply_to_message_id"), false);
+    const body = JSON.parse(capturedInit?.body as string);
+    assert.deepStrictEqual(Object.hasOwn(body, "reply_to_message_id"), false);
   });
 
   it("handle falsy parameter values correctly", async () => {
-    let capturedUrl: string | undefined;
+    let capturedInit: RequestInit | undefined;
 
-    mockFetch = async (input: string | URL | Request) => {
-      capturedUrl = input.toString();
+    mockFetch = async (
+      _input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      capturedInit = init;
       return new Response(JSON.stringify({ ok: true, result: {} }));
     };
 
@@ -220,32 +241,39 @@ describe("api", () => {
       disable_notification: false,
     });
 
-    const url = new URL(capturedUrl!);
-    assert.deepStrictEqual(url.searchParams.get("chat_id"), "0");
-    assert.deepStrictEqual(url.searchParams.get("text"), "");
-    assert.deepStrictEqual(url.searchParams.get("disable_notification"), "false");
+    assert.deepStrictEqual(JSON.parse(capturedInit?.body as string), {
+      chat_id: 0,
+      text: "",
+      disable_notification: false,
+    });
   });
 
   it("work with no parameters", async () => {
-    let capturedUrl: string | undefined;
+    let capturedInit: RequestInit | undefined;
 
-    mockFetch = async (input: string | URL | Request) => {
-      capturedUrl = input.toString();
+    mockFetch = async (
+      _input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      capturedInit = init;
       return new Response(JSON.stringify({ ok: true, result: {} }));
     };
 
     client = tgtb(BOT_TOKEN, { fetch_fn: mockFetch });
     await client.api.getMe();
 
-    const url = new URL(capturedUrl!);
-    assert.deepStrictEqual(Array.from(url.searchParams.entries()).length, 0);
+    assert.deepStrictEqual(capturedInit?.method, "POST");
+    assert.deepStrictEqual(JSON.parse(capturedInit?.body as string), {});
   });
 
   it("handle falsy parameter values", async () => {
-    let capturedUrl: string | undefined;
+    let capturedInit: RequestInit | undefined;
 
-    mockFetch = async (input: string | URL | Request) => {
-      capturedUrl = input.toString();
+    mockFetch = async (
+      _input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      capturedInit = init;
       return new Response(JSON.stringify({ ok: true, result: {} }));
     };
 
@@ -256,15 +284,21 @@ describe("api", () => {
       disable_notification: false,
     });
 
-    const url = new URL(capturedUrl!);
-    assert.deepStrictEqual(url.searchParams.get("disable_notification"), "false");
+    assert.deepStrictEqual(JSON.parse(capturedInit?.body as string), {
+      chat_id: 123456,
+      text: "test message",
+      disable_notification: false,
+    });
   });
 
   it("handle optional parameters", async () => {
-    let capturedUrl: string | undefined;
+    let capturedInit: RequestInit | undefined;
 
-    mockFetch = async (input: string | URL | Request) => {
-      capturedUrl = input.toString();
+    mockFetch = async (
+      _input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      capturedInit = init;
       return new Response(JSON.stringify({ ok: true, result: {} }));
     };
 
@@ -277,10 +311,13 @@ describe("api", () => {
       message_thread_id: 789,
     });
 
-    const url = new URL(capturedUrl!);
-    assert.deepStrictEqual(url.searchParams.get("disable_notification"), "false");
-    assert.deepStrictEqual(url.searchParams.get("protect_content"), "true");
-    assert.deepStrictEqual(url.searchParams.get("message_thread_id"), "789");
+    assert.deepStrictEqual(JSON.parse(capturedInit?.body as string), {
+      chat_id: 123456,
+      text: "test message",
+      disable_notification: false,
+      protect_content: true,
+      message_thread_id: 789,
+    });
   });
 
   it("handle complex response types", async () => {
@@ -411,7 +448,7 @@ describe("api", () => {
 describe("api rate limiting", () => {
   const BOT_TOKEN = "test_token";
 
-  // await the in-flight fetch chain so the retry timer gets scheduled
+  // ensure retry timer is scheduled
   const flush = () => new Promise((resolve) => setImmediate(resolve));
 
   it("retry a 429 response and return the next result", async () => {
@@ -537,28 +574,262 @@ describe("api rate limiting", () => {
     assert.equal(calls, 1);
   });
 
-  it("not retry a 429 without a positive retry_after", async () => {
-    const errors = [
-      { ok: false as const, error_code: 429, description: "Too Many Requests" },
-      {
-        ok: false as const,
-        error_code: 429,
-        description: "Too Many Requests: retry after 0",
-        parameters: { retry_after: 0 },
-      },
-    ];
-
-    for (const error of errors) {
+  it("retry a 429 without retry_after using the backoff", async () => {
+    mock.timers.enable({ apis: ["setTimeout"], now: 0 });
+    try {
       let calls = 0;
+      const fetchFn = async () => {
+        calls += 1;
+        if (calls <= 2) {
+          return new Response(
+            JSON.stringify({ ok: false, error_code: 429, description: "Too Many Requests" }),
+          );
+        }
+        return new Response(JSON.stringify({ ok: true, result: {} }));
+      };
+
+      const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn, max_retries: 2 });
+      const response = client.api.getMe();
+      // first retry is immediate
+      await flush();
+      mock.timers.tick(0);
+      // second retry waits 100ms
+      await flush();
+      mock.timers.tick(100);
+
+      assert.deepStrictEqual(await response, { ok: true, result: {} });
+      assert.equal(calls, 3);
+    } finally {
+      mock.timers.reset();
+    }
+  });
+
+  it("retry a 5xx error with backoff and return the next result", async () => {
+    mock.timers.enable({ apis: ["setTimeout"], now: 0 });
+    try {
+      let calls = 0;
+      const fetchFn = async () => {
+        calls += 1;
+        if (calls === 1) {
+          return new Response(
+            JSON.stringify({ ok: false, error_code: 500, description: "Internal Server Error" }),
+          );
+        }
+        return new Response(JSON.stringify({ ok: true, result: {} }));
+      };
+
+      const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn });
+      const response = client.api.getMe();
+      await flush();
+      mock.timers.tick(0);
+
+      assert.deepStrictEqual(await response, { ok: true, result: {} });
+      assert.equal(calls, 2);
+    } finally {
+      mock.timers.reset();
+    }
+  });
+
+  it("return the 5xx response after exhausting max_retries", async () => {
+    mock.timers.enable({ apis: ["setTimeout"], now: 0 });
+    try {
+      let calls = 0;
+      const error = { ok: false, error_code: 502, description: "Bad Gateway" };
       const fetchFn = async () => {
         calls += 1;
         return new Response(JSON.stringify(error));
       };
 
-      const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn });
+      const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn, max_retries: 2 });
+      const response = client.api.getMe();
+      await flush();
+      mock.timers.tick(0);
+      await flush();
+      mock.timers.tick(100);
+      await flush();
+      mock.timers.tick(200);
 
-      assert.deepStrictEqual(await client.api.getMe(), error);
-      assert.equal(calls, 1);
+      assert.deepStrictEqual(await response, error);
+      assert.equal(calls, 3);
+    } finally {
+      mock.timers.reset();
+    }
+  });
+
+  it("retry a network error and return the next result", async () => {
+    mock.timers.enable({ apis: ["setTimeout"], now: 0 });
+    try {
+      let calls = 0;
+      const fetchFn = async () => {
+        calls += 1;
+        if (calls === 1) throw new TypeError("fetch failed");
+        return new Response(JSON.stringify({ ok: true, result: {} }));
+      };
+
+      const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn });
+      const response = client.api.getMe();
+      await flush();
+      mock.timers.tick(0);
+
+      assert.deepStrictEqual(await response, { ok: true, result: {} });
+      assert.equal(calls, 2);
+    } finally {
+      mock.timers.reset();
+    }
+  });
+
+  it("rethrow the network error after exhausting max_retries", async () => {
+    mock.timers.enable({ apis: ["setTimeout"], now: 0 });
+    try {
+      let calls = 0;
+      const error = new TypeError("fetch failed");
+      const fetchFn = async () => {
+        calls += 1;
+        throw error;
+      };
+
+      const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn, max_retries: 1 });
+      const response = client.api.getMe();
+      await flush();
+      mock.timers.tick(0);
+
+      await assert.rejects(response, (thrown: unknown) => thrown === error);
+      assert.equal(calls, 2);
+    } finally {
+      mock.timers.reset();
+    }
+  });
+
+  it("retry a non-JSON response and return the next result", async () => {
+    mock.timers.enable({ apis: ["setTimeout"], now: 0 });
+    try {
+      let calls = 0;
+      const fetchFn = async () => {
+        calls += 1;
+        if (calls === 1) {
+          return new Response("<html>Bad Gateway</html>", {
+            status: 502,
+            headers: { "Content-Type": "text/html" },
+          });
+        }
+        return new Response(JSON.stringify({ ok: true, result: {} }));
+      };
+
+      const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn });
+      const response = client.api.getMe();
+      await flush();
+      mock.timers.tick(0);
+
+      assert.deepStrictEqual(await response, { ok: true, result: {} });
+      assert.equal(calls, 2);
+    } finally {
+      mock.timers.reset();
+    }
+  });
+
+  it("throw on a non-JSON response after exhausting max_retries", async () => {
+    mock.timers.enable({ apis: ["setTimeout"], now: 0 });
+    try {
+      let calls = 0;
+      const fetchFn = async () => {
+        calls += 1;
+        return new Response("<html>Bad Gateway</html>", {
+          status: 502,
+          headers: { "Content-Type": "text/html" },
+        });
+      };
+
+      const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn, max_retries: 1 });
+      const response = client.api.getMe();
+      await flush();
+      mock.timers.tick(0);
+
+      await assert.rejects(response, /non-JSON response for getMe/);
+      assert.equal(calls, 2);
+    } finally {
+      mock.timers.reset();
+    }
+  });
+
+  it("retry a JSON-null response and return the next result", async () => {
+    mock.timers.enable({ apis: ["setTimeout"], now: 0 });
+    try {
+      let calls = 0;
+      const fetchFn = async () => {
+        calls += 1;
+        if (calls === 1) {
+          return new Response("null", {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return new Response(JSON.stringify({ ok: true, result: {} }));
+      };
+
+      const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn });
+      const response = client.api.getMe();
+      await flush();
+      mock.timers.tick(0);
+
+      assert.deepStrictEqual(await response, { ok: true, result: {} });
+      assert.equal(calls, 2);
+    } finally {
+      mock.timers.reset();
+    }
+  });
+
+  it("throw on a JSON-null response after exhausting max_retries", async () => {
+    mock.timers.enable({ apis: ["setTimeout"], now: 0 });
+    try {
+      let calls = 0;
+      const fetchFn = async () => {
+        calls += 1;
+        return new Response("null", {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      };
+
+      const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn, max_retries: 1 });
+      const response = client.api.getMe();
+      await flush();
+      mock.timers.tick(0);
+
+      await assert.rejects(response, /malformed response for getMe/);
+      assert.equal(calls, 2);
+    } finally {
+      mock.timers.reset();
+    }
+  });
+
+  it("apply the default max_retries when explicitly undefined", async () => {
+    mock.timers.enable({ apis: ["setTimeout"], now: 0 });
+    try {
+      let calls = 0;
+      const fetchFn = async () => {
+        calls += 1;
+        if (calls <= 3) {
+          return new Response(
+            JSON.stringify({ ok: false, error_code: 500, description: "oops" }),
+          );
+        }
+        return new Response(JSON.stringify({ ok: true, result: {} }));
+      };
+
+      const client = tgtb(BOT_TOKEN, {
+        fetch_fn: fetchFn,
+        max_retries: undefined,
+      });
+      const response = client.api.getMe();
+      for (const wait of [0, 100, 200]) {
+        await flush();
+        mock.timers.tick(wait);
+      }
+
+      assert.deepStrictEqual(await response, { ok: true, result: {} });
+      assert.equal(calls, 4);
+    } finally {
+      mock.timers.reset();
     }
   });
 });

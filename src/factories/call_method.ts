@@ -28,6 +28,39 @@ function createMethodUrl(
 }
 
 /**
+ * Build a JSON request body for a Telegram API method, dropping null/undefined
+ * params so Telegram does not reject them.
+ *
+ * @ignore
+ * @internal
+ * @param params - method params
+ * @returns JSON-serialized body
+ */
+function buildRequestBody(params?: Record<string, unknown>): string {
+  if (!params) {
+    return "{}";
+  }
+
+  const body: Record<string, unknown> = {};
+  for (const key in params) {
+    const value = params[key];
+    if (value === null || value === undefined) {
+      continue;
+    }
+    body[key] = value;
+  }
+
+  return JSON.stringify(body);
+}
+
+const INITIAL_DELAY_MS = 100;
+const MAX_DELAY_MS = 20 * 60 * 1000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
  * Build a function to call a method
  *
  * @ignore
@@ -40,47 +73,85 @@ export function buildCallMethod(
   bot_token: string,
   config: TgtbConfig,
 ) {
-  const { fetch_fn, max_retries } = config as Required<TgtbConfig>;
+  const { fetch_fn, max_retries = 3 } = config as Required<TgtbConfig>;
   return async <M extends BotMethodKeys<F>, F = unknown>(
     method: M,
     params?: Opts<F>[M],
   ): Promise<ApiResponse<ReturnType<ApiMethods<F>[M]>>> => {
     const url = createMethodUrl(bot_token, config, method);
+    const body = buildRequestBody(params as Record<string, unknown> | undefined);
 
-    // append params
-    for (const key in params) {
-      const value = (params as Record<string, unknown>)[key];
+    let delay = 0;
+    const backoff = () => {
+      const wait = delay;
+      delay = Math.min(MAX_DELAY_MS, delay === 0 ? INITIAL_DELAY_MS : delay * 2);
+      return sleep(wait);
+    };
 
-      if (value === null || value === undefined) {
+    for (let attempt = 0; ; attempt++) {
+      let response: Response;
+      try {
+        response = await fetch_fn(url.toString(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+        });
+      } catch (error) {
+        if (attempt >= max_retries) throw error;
+        await backoff();
         continue;
       }
 
-      if (typeof value === "object") {
-        url.searchParams.set(key, JSON.stringify(value));
-      } else {
-        url.searchParams.set(key, String(value));
-      }
-    }
-
-    for (let attempt = 0; ; attempt++) {
-      const response = await fetch_fn(url.toString());
-      const result = await response.json() as ApiResponse<
-        ReturnType<ApiMethods<F>[M]>
-      >;
-
-      if (result.ok || result.error_code !== 429 || attempt >= max_retries) {
-        return result;
+      let result: ApiResponse<ReturnType<ApiMethods<F>[M]>>;
+      try {
+        result = await response.json();
+      } catch {
+        // proxy HTML error page
+        if (attempt >= max_retries) {
+          throw new Error(
+            `tgtb: non-JSON response for ${method} (HTTP ${response.status})`,
+          );
+        }
+        await backoff();
+        continue;
       }
 
-      // retry_after is usually in parameters, but may only be in the description
-      const retry_after = result.parameters?.retry_after ??
-        Number(/retry after (\d+)/i.exec(result.description)?.[1] ?? 0);
-
-      if (retry_after <= 0) {
-        return result;
+      // non-object JSON from proxy
+      if (result === null || typeof result !== "object") {
+        if (attempt >= max_retries) {
+          throw new Error(
+            `tgtb: malformed response for ${method} (HTTP ${response.status})`,
+          );
+        }
+        await backoff();
+        continue;
       }
 
-      await new Promise((resolve) => setTimeout(resolve, retry_after * 1000));
+      if (result.ok) return result;
+
+      if (result.error_code === 429) {
+        if (attempt >= max_retries) return result;
+
+        // retry_after description fallback
+        const retry_after = result.parameters?.retry_after ??
+          Number(/retry after (\d+)/i.exec(result.description)?.[1] ?? 0);
+
+        if (retry_after > 0) {
+          await sleep(retry_after * 1000);
+          delay = 0; // wait covered the backoff
+        } else {
+          await backoff();
+        }
+        continue;
+      }
+
+      // 5xx transient, 4xx terminal
+      if ((result.error_code ?? 0) >= 500 && attempt < max_retries) {
+        await backoff();
+        continue;
+      }
+
+      return result;
     }
   };
 }
@@ -106,7 +177,7 @@ export default function buildAPICaller<F>(
         return await callMethod(method as BotMethodKeys<F>, params);
       };
 
-      // Add url property to the function
+      // expose .url
       Object.defineProperty(methodFn, "url", {
         get: () => createMethodUrl(bot_token, config, method).toString(),
       });

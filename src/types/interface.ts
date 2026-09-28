@@ -180,8 +180,9 @@ export interface TgtbConfig {
    */
   ed25519_public_key?: string | null;
   /**
-   * Number of times to retry a request when Telegram returns a 429 error,
-   * waiting `retry_after` seconds between attempts
+   * Number of times to retry a request on a 429, 5xx, network, or
+   * malformed-response failure, waiting `retry_after` seconds on 429 and
+   * backing off exponentially otherwise
    * If 0, retrying is disabled
    * @default 3
    */

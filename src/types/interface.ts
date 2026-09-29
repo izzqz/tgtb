@@ -8,9 +8,75 @@ import type {
   ApiResponse,
   Opts,
   TelegramOAuthUser,
+  Update,
 } from "./telegram.ts";
 
 export type { ApiMethods, ApiResponse, Opts } from "./telegram.ts";
+
+/**
+ * Options for long polling
+ */
+export interface PollingOptions {
+  /**
+   * Long poll timeout in seconds
+   * @default 50
+   */
+  timeout?: number;
+  /**
+   * Limits the number of updates to be retrieved, 1-100
+   * @see https://core.telegram.org/bots/api#getupdates
+   */
+  limit?: number;
+  /**
+   * List of update types to receive
+   */
+  allowed_updates?: ReadonlyArray<Exclude<keyof Update, "update_id">>;
+  /**
+   * Delete an existing webhook before polling starts
+   * getUpdates returns 409 Conflict while a webhook is set
+   * @default true
+   */
+  delete_webhook?: boolean;
+  /**
+   * First backoff wait after a failed poll, doubled on each
+   * subsequent consecutive failure
+   * @default 1000
+   */
+  backoff_min_ms?: number;
+  /**
+   * Upper bound for the backoff wait
+   * @default 30000
+   */
+  backoff_max_ms?: number;
+}
+
+/**
+ * Long polling tools
+ */
+export interface PollingTools {
+  /**
+   * Start long polling and yield updates
+   *
+   * Offset advances only after the consumer requests the next update,
+   * so a thrown handler error redelivers the update on restart
+   *
+   * @example Poll updates
+   * ```ts
+   * import tgtb from "@izzqz/tgtb";
+   *
+   * const bot = tgtb("123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11");
+   *
+   * for await (const update of bot.polling.updates()) {
+   *   console.log(update.update_id);
+   * }
+   * ```
+   */
+  updates(options?: PollingOptions): AsyncGenerator<Update, void, unknown>;
+  /**
+   * Stop polling after the in-flight getUpdates request returns
+   */
+  stop(): void;
+}
 
 /**
  * List of all bot API methods
@@ -144,6 +210,11 @@ export interface Client<F = unknown> {
      */
     validate: (oauth_user: TelegramOAuthUser) => Promise<void>;
   };
+
+  /**
+   * Long polling tools
+   */
+  polling: PollingTools;
 }
 
 /**

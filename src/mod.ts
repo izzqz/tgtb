@@ -5,6 +5,7 @@
  * ## Features
  *
  * - Call API methods
+ * - Long polling for updates
  * - Validate data from webapp
  * - Testing functions
  *
@@ -33,6 +34,7 @@ import type { Client, TgtbConfig } from "./types/interface.ts";
 import buildInitDataTools from "./factories/validate_webapp.ts";
 import buildAPICaller from "./factories/call_method.ts";
 import buildOAuthTools from "./factories/validate_oauth.ts";
+import buildPollingTools from "./factories/polling.ts";
 
 /**
  * Default options for the TgtbClient
@@ -91,6 +93,7 @@ export default function tgtb(
     api: buildAPICaller(bot_token, mergedConfig),
     init_data: buildInitDataTools(bot_token, mergedConfig),
     oauth: buildOAuthTools(bot_token, mergedConfig),
+    polling: buildPollingTools(bot_token, mergedConfig),
   };
 }
 

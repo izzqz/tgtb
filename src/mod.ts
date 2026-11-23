@@ -85,10 +85,11 @@ export default function tgtb(
   bot_token: string,
   config?: TgtbConfig,
 ): Client {
-  const mergedConfig: TgtbConfig = {
-    ...DEFAULT_CONFIG,
-    ...config,
-  };
+  const mergedConfig: Required<TgtbConfig> = { ...DEFAULT_CONFIG };
+  // explicit undefined falls back to the default instead of erasing it
+  for (const [key, value] of Object.entries(config ?? {})) {
+    if (value !== undefined) Object.assign(mergedConfig, { [key]: value });
+  }
   return {
     api: buildAPICaller(bot_token, mergedConfig),
     init_data: buildInitDataTools(bot_token, mergedConfig),

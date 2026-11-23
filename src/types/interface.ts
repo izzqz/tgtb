@@ -57,8 +57,12 @@ export interface PollingTools {
   /**
    * Start long polling and yield updates
    *
-   * Offset advances only after the consumer requests the next update,
-   * so a thrown handler error redelivers the update on restart
+   * An update is confirmed only after the consumer requests the next one,
+   * so a thrown handler error redelivers it on restart. When the loop ends
+   * (`stop()`, `break`, or a throw), handled updates are confirmed.
+   * Network errors and 5xx/409/429 responses are retried with backoff,
+   * other 4xx errors (bad token, bad params) throw.
+   * Starting a new `updates()` loop stops the previous one
    *
    * @example Poll updates
    * ```ts
@@ -73,7 +77,8 @@ export interface PollingTools {
    */
   updates(options?: PollingOptions): AsyncGenerator<Update, void, unknown>;
   /**
-   * Stop polling after the in-flight getUpdates request returns
+   * Stop polling: no more updates are yielded, the in-flight getUpdates
+   * request is not aborted
    */
   stop(): void;
 }
@@ -195,18 +200,22 @@ export interface Client<F = unknown> {
      */
     isValid: (init_data: string) => Promise<boolean>;
     /**
-     * Validate data from webapp and trow if not valid
+     * Validate data from webapp and throw if not valid
      */
     validate: (init_data: string) => Promise<void>;
   };
 
+  /**
+   * Methods to validate user data from the
+   * [Telegram Login Widget](https://core.telegram.org/widgets/login)
+   */
   oauth: {
     /**
      * Validate user data from telegram widget and return boolean
      */
     isValid: (oauth_user: TelegramOAuthUser) => Promise<boolean>;
     /**
-     * Validate user data from telegram widget and trow if not valid
+     * Validate user data from telegram widget and throw if not valid
      */
     validate: (oauth_user: TelegramOAuthUser) => Promise<void>;
   };
@@ -251,9 +260,14 @@ export interface TgtbConfig {
    */
   ed25519_public_key?: string | null;
   /**
-   * Number of times to retry a request on a 429, 5xx, network, or
-   * malformed-response failure, waiting `retry_after` seconds on 429 and
-   * backing off exponentially otherwise
+   * Number of times to retry a failed request, backing off exponentially
+   *
+   * - 429 is retried for every method, waiting `retry_after` seconds;
+   *   a `retry_after` over 60 seconds is returned to the caller instead
+   * - network errors, 5xx and malformed responses are retried only for
+   *   `get*` methods: the request may have been executed, and resending
+   *   e.g. `sendMessage` would post a duplicate
+   *
    * If 0, retrying is disabled
    * @default 3
    */

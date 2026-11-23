@@ -10,20 +10,11 @@ export const TOKEN_CHARS =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
 
 /**
- * "WebApp" as Uint8Array
+ * "WebAppData" as Uint8Array, the HMAC key for Mini App init data
  */
-export const WEB_APP_UINT8: Uint8Array<ArrayBuffer> = new Uint8Array([
-  87,
-  101,
-  98,
-  65,
-  112,
-  112,
-  68,
-  97,
-  116,
-  97,
-]);
+export const WEB_APP_UINT8: Uint8Array<ArrayBuffer> = new TextEncoder().encode(
+  "WebAppData",
+) as Uint8Array<ArrayBuffer>;
 
 /**
  * Telegram Ed25519 public key

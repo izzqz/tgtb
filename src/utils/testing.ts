@@ -31,7 +31,7 @@
  */
 
 import type { Faker } from "@faker-js/faker";
-import { TOKEN_CHARS } from "../constants.ts";
+import { TOKEN_CHARS, WEB_APP_UINT8 } from "../constants.ts";
 import type { TelegramOAuthUser } from "../types/telegram.ts";
 import {
   compareCodes,
@@ -72,12 +72,7 @@ const faker: Faker = faker_module?.faker ??
  */
 export function randomBotToken(bot_id?: number): string {
   const botId = bot_id ?? randomBotId();
-  const botHash = Array.from(
-    { length: 35 },
-    () => faker.helpers.arrayElement(TOKEN_CHARS.split("")),
-  ).join("");
-
-  return `${botId}:${botHash}`;
+  return `${botId}:${faker.string.fromCharacters(TOKEN_CHARS, 35)}`;
 }
 
 /**
@@ -99,7 +94,7 @@ export function randomBotId(): number {
 /**
  * Generates a random bot username
  *
- * It will allways ands with bot. Could be in camelCase or snake_case
+ * It always ends with bot. Could be in camelCase or snake_case
  *
  * @example
  * ```ts
@@ -111,31 +106,19 @@ export function randomBotId(): number {
  * @returns A random bot username
  */
 export function randomBotUsername(): string {
-  // Generate base name (2-29 chars to accommodate 'bot' suffix)
+  // 2-28 chars, so the name with the suffix fits Telegram's 32 limit
   const baseLength = faker.number.int({ min: 2, max: 28 });
-  let baseName = faker.lorem.word()
-    .replace(/[^a-zA-Z0-9]/g, "") // Remove any non-alphanumeric chars
-    .slice(0, baseLength);
+  let baseName: string;
+  do {
+    baseName = faker.lorem.word().replace(/[^a-zA-Z0-9]/g, "").slice(
+      0,
+      baseLength,
+    ).toLowerCase();
+  } while (baseName.length < 2);
 
-  // Ensure we have at least 2 characters after cleanup
-  while (baseName.length < 2) {
-    baseName = faker.lorem.word()
-      .replace(/[^a-zA-Z0-9]/g, "")
-      .slice(0, baseLength);
-  }
-
-  // Randomly choose between CamelCase and snake_case
-  const useCamelCase = faker.datatype.boolean();
-
-  if (useCamelCase) {
-    // CamelCase format (e.g., TetrisBot)
-    const capitalizedBase = baseName.charAt(0).toUpperCase() +
-      baseName.slice(1).toLowerCase();
-    return `${capitalizedBase}Bot`;
-  } else {
-    // snake_case format (e.g., tetris_bot)
-    return `${baseName.toLowerCase()}_bot`;
-  }
+  return faker.datatype.boolean()
+    ? `${baseName[0].toUpperCase()}${baseName.slice(1)}Bot` // TetrisBot
+    : `${baseName}_bot`; // tetris_bot
 }
 
 /**
@@ -216,19 +199,18 @@ export async function signInitData(
     entries.push(["signature", toBase64(signature)]);
   }
 
-  const sortedEntries = entries.sort(([a], [b]) => compareCodes(a, b));
-
   const secretKey = await signHMAC(
-    await importHMAC(encode("WebAppData")),
+    await importHMAC(WEB_APP_UINT8),
     encode(bot_token),
   );
 
   const hash = await signHMAC(
-    await importHMAC(await secretKey),
-    encode(createDataCheckString(sortedEntries)),
+    await importHMAC(secretKey),
+    encode(createDataCheckString(entries)),
   );
 
-  const params = sortedEntries
+  const params = entries
+    .sort(([a], [b]) => compareCodes(a, b))
     .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
     .join("&");
 
@@ -309,52 +291,20 @@ export async function signOAuthUser(
   bot_token: string,
   user: Omit<TelegramOAuthUser, "hash">,
 ): Promise<TelegramOAuthUser> {
-  // Convert all values to strings and filter out undefined/null
-  const entries = Object.entries(user)
-    .filter(([key, value]) => value != null && key !== "hash")
-    .map(([key, value]) => [key, String(value)]);
+  // drop undefined/null fields, they are not part of the signed data
+  const fields = Object.fromEntries(
+    Object.entries(user).filter(([key, value]) =>
+      value != null && key !== "hash"
+    ),
+  ) as Omit<TelegramOAuthUser, "hash">;
 
-  const sortedEntries = entries.sort(([a], [b]) => compareCodes(a, b));
-
-  const dataCheckString = sortedEntries
-    .map(([key, value]) => `${key}=${value}`)
-    .join("\n");
-
-  const encoder = new TextEncoder();
-  const secretKey = await crypto.subtle.digest(
-    "SHA-256",
-    encoder.encode(bot_token),
+  const secretKey = await crypto.subtle.digest("SHA-256", encode(bot_token));
+  const signature = await signHMAC(
+    await importHMAC(secretKey),
+    encode(createDataCheckString(Object.entries(fields))),
   );
 
-  const hmacKey = await crypto.subtle.importKey(
-    "raw",
-    secretKey,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-
-  const signature = await crypto.subtle.sign(
-    "HMAC",
-    hmacKey,
-    encoder.encode(dataCheckString),
-  );
-
-  // Convert back to original types for id and auth_date
-  const processedEntries = entries.map(([key, value]) => {
-    if (key === "id") {
-      return [key, parseInt(value, 10)];
-    }
-    if (key === "auth_date") {
-      return [key, parseInt(value, 10)];
-    }
-    return [key, value];
-  });
-
-  return {
-    ...Object.fromEntries(processedEntries),
-    hash: toHex(signature),
-  };
+  return { ...fields, hash: toHex(signature) };
 }
 
 /**

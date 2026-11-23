@@ -298,4 +298,17 @@ test("validate_oauth", async (t) => {
     await client.oauth.validate(user1);
     assert.deepStrictEqual(await client.oauth.isValid(user1), true);
   });
+
+  await t.test("reject missing auth_date when expiration is set", async () => {
+    const user = await signOAuthUser(
+      BOT_TOKEN,
+      { id: 1, first_name: "Test" } as Omit<TelegramOAuthUser, "hash">,
+    );
+
+    await tgtb(BOT_TOKEN).oauth.validate(user);
+    await assert.rejects(
+      () => tgtb(BOT_TOKEN, { hash_expiration: 60 }).oauth.validate(user),
+      { message: "no auth_date" },
+    );
+  });
 });

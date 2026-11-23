@@ -172,6 +172,8 @@ describe("polling", () => {
           }
           return okUpdates([update(1)]);
         }),
+        // isolate the polling backoff from the per-request retries
+        max_retries: 0,
       });
 
       const iterator = client.polling.updates();
@@ -210,6 +212,8 @@ describe("polling", () => {
           }
           return okUpdates([update(1)]);
         }),
+        // isolate the polling backoff from the per-request retries
+        max_retries: 0,
       });
 
       const waits: number[] = [];
@@ -256,6 +260,99 @@ describe("polling", () => {
 
     assert.deepStrictEqual(received, [1]);
     const polls = recordCalls.filter((c) => !isDelete(c.url));
-    assert.equal(polls.length, 1);
+    // the second call only confirms the handled update
+    assert.equal(polls.length, 2);
+    assert.deepStrictEqual(polls[1].body, { offset: 2, limit: 1, timeout: 0 });
+  });
+
+  it("keep polling through a network error", async () => {
+    mock.timers.enable({ apis: ["setTimeout"], now: 0 });
+    try {
+      let getUpdatesCalls = 0;
+      client = tgtb(BOT_TOKEN, {
+        fetch_fn: recordingFetch(({ url }) => {
+          if (isDelete(url)) return okTrue();
+          getUpdatesCalls += 1;
+          if (getUpdatesCalls === 1) throw new TypeError("fetch failed");
+          return okUpdates([update(1)]);
+        }),
+        max_retries: 0,
+      });
+
+      const iterator = client.polling.updates();
+      const next = iterator.next();
+      await flush();
+      mock.timers.tick(1000);
+      await flush();
+      const { value } = await next;
+      assert.equal(value!.update_id, 1);
+      await iterator.return();
+    } finally {
+      mock.timers.reset();
+    }
+  });
+
+  it("throw on an unrecoverable error", async () => {
+    client = tgtb(BOT_TOKEN, {
+      fetch_fn: async (input) =>
+        isDelete(input as string) ? okTrue() : new Response(
+          JSON.stringify({ ok: false, error_code: 401, description: "Unauthorized" }),
+        ),
+    });
+
+    await assert.rejects(
+      client.polling.updates().next(),
+      /getUpdates failed: Unauthorized/,
+    );
+  });
+
+  it("stop mid-batch and confirm only the handled updates", async () => {
+    client = tgtb(BOT_TOKEN, {
+      fetch_fn: recordingFetch(({ url }) =>
+        isDelete(url) ? okTrue() : okUpdates([update(1), update(2), update(3)])
+      ),
+    });
+
+    const received: number[] = [];
+    for await (const u of client.polling.updates()) {
+      received.push(u.update_id);
+      client.polling.stop();
+    }
+
+    assert.deepStrictEqual(received, [1]);
+    const polls = recordCalls.filter((c) => !isDelete(c.url));
+    assert.deepStrictEqual(polls.at(-1)!.body, { offset: 2, limit: 1, timeout: 0 });
+  });
+
+  it("confirm handled updates on break", async () => {
+    client = tgtb(BOT_TOKEN, {
+      fetch_fn: recordingFetch(({ url }) =>
+        isDelete(url) ? okTrue() : okUpdates([update(1), update(2), update(3)])
+      ),
+    });
+
+    for await (const u of client.polling.updates()) {
+      if (u.update_id === 2) break;
+    }
+
+    const polls = recordCalls.filter((c) => !isDelete(c.url));
+    // update 2 was being handled at break, so it is not confirmed
+    assert.deepStrictEqual(polls.at(-1)!.body, { offset: 2, limit: 1, timeout: 0 });
+  });
+
+  it("stop the previous loop when a new one starts", async () => {
+    client = tgtb(BOT_TOKEN, {
+      fetch_fn: async (input) =>
+        isDelete(input as string) ? okTrue() : okUpdates([update(1), update(2)]),
+    });
+
+    const first = client.polling.updates();
+    assert.equal((await first.next()).value!.update_id, 1);
+
+    const second = client.polling.updates();
+    assert.equal((await second.next()).value!.update_id, 1);
+
+    assert.equal((await first.next()).done, true);
+    await second.return();
   });
 });

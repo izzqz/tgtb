@@ -590,12 +590,11 @@ describe("api rate limiting", () => {
 
       const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn, max_retries: 2 });
       const response = client.api.getMe();
-      // first retry is immediate
-      await flush();
-      mock.timers.tick(0);
-      // second retry waits 100ms
+      // backoff waits 100ms, then 200ms
       await flush();
       mock.timers.tick(100);
+      await flush();
+      mock.timers.tick(200);
 
       assert.deepStrictEqual(await response, { ok: true, result: {} });
       assert.equal(calls, 3);
@@ -621,7 +620,7 @@ describe("api rate limiting", () => {
       const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn });
       const response = client.api.getMe();
       await flush();
-      mock.timers.tick(0);
+      mock.timers.tick(100);
 
       assert.deepStrictEqual(await response, { ok: true, result: {} });
       assert.equal(calls, 2);
@@ -642,8 +641,6 @@ describe("api rate limiting", () => {
 
       const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn, max_retries: 2 });
       const response = client.api.getMe();
-      await flush();
-      mock.timers.tick(0);
       await flush();
       mock.timers.tick(100);
       await flush();
@@ -669,7 +666,7 @@ describe("api rate limiting", () => {
       const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn });
       const response = client.api.getMe();
       await flush();
-      mock.timers.tick(0);
+      mock.timers.tick(100);
 
       assert.deepStrictEqual(await response, { ok: true, result: {} });
       assert.equal(calls, 2);
@@ -691,7 +688,7 @@ describe("api rate limiting", () => {
       const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn, max_retries: 1 });
       const response = client.api.getMe();
       await flush();
-      mock.timers.tick(0);
+      mock.timers.tick(100);
 
       await assert.rejects(response, (thrown: unknown) => thrown === error);
       assert.equal(calls, 2);
@@ -718,7 +715,7 @@ describe("api rate limiting", () => {
       const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn });
       const response = client.api.getMe();
       await flush();
-      mock.timers.tick(0);
+      mock.timers.tick(100);
 
       assert.deepStrictEqual(await response, { ok: true, result: {} });
       assert.equal(calls, 2);
@@ -742,9 +739,9 @@ describe("api rate limiting", () => {
       const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn, max_retries: 1 });
       const response = client.api.getMe();
       await flush();
-      mock.timers.tick(0);
+      mock.timers.tick(100);
 
-      await assert.rejects(response, /non-JSON response for getMe/);
+      await assert.rejects(response, /malformed response for getMe/);
       assert.equal(calls, 2);
     } finally {
       mock.timers.reset();
@@ -769,7 +766,7 @@ describe("api rate limiting", () => {
       const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn });
       const response = client.api.getMe();
       await flush();
-      mock.timers.tick(0);
+      mock.timers.tick(100);
 
       assert.deepStrictEqual(await response, { ok: true, result: {} });
       assert.equal(calls, 2);
@@ -793,7 +790,7 @@ describe("api rate limiting", () => {
       const client = tgtb(BOT_TOKEN, { fetch_fn: fetchFn, max_retries: 1 });
       const response = client.api.getMe();
       await flush();
-      mock.timers.tick(0);
+      mock.timers.tick(100);
 
       await assert.rejects(response, /malformed response for getMe/);
       assert.equal(calls, 2);
@@ -821,7 +818,7 @@ describe("api rate limiting", () => {
         max_retries: undefined,
       });
       const response = client.api.getMe();
-      for (const wait of [0, 100, 200]) {
+      for (const wait of [100, 200, 400]) {
         await flush();
         mock.timers.tick(wait);
       }
@@ -831,5 +828,98 @@ describe("api rate limiting", () => {
     } finally {
       mock.timers.reset();
     }
+  });
+
+  it("not resend a non-read method on a network error", async () => {
+    let calls = 0;
+    const client = tgtb(BOT_TOKEN, {
+      fetch_fn: async () => {
+        calls += 1;
+        throw new TypeError("connection reset");
+      },
+    });
+
+    await assert.rejects(
+      client.api.sendMessage({ chat_id: 1, text: "x" }),
+      /connection reset/,
+    );
+    assert.equal(calls, 1);
+  });
+
+  it("not resend a non-read method on a 5xx", async () => {
+    let calls = 0;
+    const error = { ok: false, error_code: 502, description: "Bad Gateway" };
+    const client = tgtb(BOT_TOKEN, {
+      fetch_fn: async () => {
+        calls += 1;
+        return new Response(JSON.stringify(error));
+      },
+    });
+
+    assert.deepStrictEqual(
+      await client.api.sendMessage({ chat_id: 1, text: "x" }),
+      error,
+    );
+    assert.equal(calls, 1);
+  });
+
+  it("retry a non-read method on a 429", async () => {
+    mock.timers.enable({ apis: ["setTimeout"], now: 0 });
+    try {
+      let calls = 0;
+      const client = tgtb(BOT_TOKEN, {
+        fetch_fn: async () => {
+          calls += 1;
+          return new Response(JSON.stringify(
+            calls === 1
+              ? { ok: false, error_code: 429, description: "Too Many Requests", parameters: { retry_after: 1 } }
+              : { ok: true, result: {} },
+          ));
+        },
+      });
+      const response = client.api.sendMessage({ chat_id: 1, text: "x" });
+      await flush();
+      mock.timers.tick(1000);
+
+      assert.deepStrictEqual(await response, { ok: true, result: {} });
+      assert.equal(calls, 2);
+    } finally {
+      mock.timers.reset();
+    }
+  });
+
+  it("return a 429 with a long retry_after instead of waiting", async () => {
+    let calls = 0;
+    const error = {
+      ok: false,
+      error_code: 429,
+      description: "Too Many Requests: retry after 3600",
+      parameters: { retry_after: 3600 },
+    };
+    const client = tgtb(BOT_TOKEN, {
+      fetch_fn: async () => {
+        calls += 1;
+        return new Response(JSON.stringify(error));
+      },
+    });
+
+    assert.deepStrictEqual(await client.api.getMe(), error);
+    assert.equal(calls, 1);
+  });
+});
+
+describe("api proxy and config", () => {
+  it("not be a thenable, so awaiting the api object resolves", async () => {
+    const client = tgtb("test_token");
+    assert.equal(Reflect.get(client.api, "then"), undefined);
+    assert.equal(await Promise.resolve(client.api), client.api);
+  });
+
+  it("fall back to defaults for explicitly undefined options", () => {
+    const client = tgtb("test_token", { base_url: undefined });
+    assert.equal(
+      client.api.getMe.url,
+      "https://api.telegram.org/bottest_token/getMe",
+    );
   });
 });
